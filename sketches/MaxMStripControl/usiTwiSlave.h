@@ -86,3 +86,5 @@ bool    usiTwiDataInReceiveBuffer( void );
 
 
 #endif  // ifndef _USI_TWI_SLAVE_H_
+
+
