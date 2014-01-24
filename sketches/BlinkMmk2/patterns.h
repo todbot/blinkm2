@@ -1,0 +1,46 @@
+
+
+patternline_t pattern[patt_max] EEMEM;
+
+patternline_t pattern_flash[patt_max] PROGMEM =
+{
+    //    G     R     B    fade ledn
+    { { 0x00, 0xff, 0x00 },  50, 1 }, // 0  red A
+    { { 0x00, 0xff, 0x00 },  50, 2 }, // 1  red B
+    { { 0x00, 0x00, 0x00 },  50, 0 }, // 2  off both
+    { { 0xff, 0x00, 0x00 },  50, 1 }, // 3  grn A
+    { { 0xff, 0x00, 0x00 },  50, 2 }, // 4  grn B
+    { { 0x00, 0x00, 0x00 },  50, 0 }, // 5  off both
+    { { 0x00, 0x00, 0xff },  50, 1 }, // 6  blu A
+    { { 0x00, 0x00, 0xff },  50, 2 }, // 7  blu B
+    { { 0x00, 0x00, 0x00 },  50, 0 }, // 8  off both
+    { { 0x80, 0x80, 0x80 }, 100, 0 }, // 9  half-bright, both LEDs
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 10 off both
+    { { 0xff, 0xff, 0xff },  50, 1 }, // 11 white A
+    { { 0x00, 0x00, 0x00 },  50, 1 }, // 12 off A
+    { { 0xff, 0xff, 0xff },  50, 2 }, // 13 white B
+    { { 0x00, 0x00, 0x00 }, 100, 2 }, // 14 off B
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
+};
+/*
+patternline_t pattern_mem[patt_max] =
+{
+    //    G     R     B    fade ledn
+    { { 0x00, 0xff, 0x00 },  50, 1 }, // 0  red A
+    { { 0x00, 0xff, 0x00 },  50, 2 }, // 1  red B
+    { { 0x00, 0x00, 0x00 },  50, 0 }, // 2  off both
+    { { 0xff, 0x00, 0x00 },  50, 1 }, // 3  grn A
+    { { 0xff, 0x00, 0x00 },  50, 2 }, // 4  grn B
+    { { 0x00, 0x00, 0x00 },  50, 0 }, // 5  off both
+    { { 0x00, 0x00, 0xff },  50, 1 }, // 6  blu A
+    { { 0x00, 0x00, 0xff },  50, 2 }, // 7  blu B
+    { { 0x00, 0x00, 0x00 },  50, 0 }, // 8  off both
+    { { 0x80, 0x80, 0x80 }, 100, 0 }, // 9  half-bright, both LEDs
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 10 off both
+    { { 0xff, 0xff, 0xff },  50, 1 }, // 11 white A
+    { { 0x00, 0x00, 0x00 },  50, 1 }, // 12 off A
+    { { 0xff, 0xff, 0xff },  50, 2 }, // 13 white B
+    { { 0x00, 0x00, 0x00 }, 100, 2 }, // 14 off B
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
+};
+*/
