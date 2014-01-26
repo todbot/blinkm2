@@ -1,33 +1,9 @@
 
 
-
-extern "C" {
-//  #include <inttypes.h>
-}
-
 #include "LEDFader.h"
 
-
-// Constructors ////////////////////////////////////////////////////////////////
-
-
-LEDFader::LEDFader(int nnumleds, CRGB* nleds, rgbfader_t* nfaders)
-{
-    nLEDs  = nnumleds;
-    leds   = nleds;
-    faders = nfaders;
-}
-
-// Public Methods //////////////////////////////////////////////////////////////
-
 //
-//void LEDFader::setUpdateHandler( UpdateHandler ahandler )
-//{
-//    updateHandler = ahandler;
-//}
-
-//
-void LEDFader::setCurr(CRGB* newcolor, int steps, int ledn)
+void LEDFader::setCurr(rgb_t* newcolor, int steps, int ledn)
 { 
     rgbfader_t* f = &faders[ledn];
     f->curr100x.r = newcolor->r * 100;
@@ -41,7 +17,7 @@ void LEDFader::setCurr(CRGB* newcolor, int steps, int ledn)
 }
 
 //
-void LEDFader::setDestN(CRGB* newcolor, int steps, int ledn)
+void LEDFader::setDestN(rgb_t* newcolor, int steps, int ledn)
 { 
     rgbfader_t* f = &faders[ledn];
     f->dest100x.r = newcolor->r * 100;
@@ -56,7 +32,7 @@ void LEDFader::setDestN(CRGB* newcolor, int steps, int ledn)
 }
 
 //
-void LEDFader::setDest(CRGB* newcolor, int steps, int ledn)
+void LEDFader::setDest(rgb_t* newcolor, int steps, int ledn)
 {
     if (ledn > 0) {
         setDestN(newcolor, steps, ledn - 1);
@@ -89,6 +65,6 @@ void LEDFader::update(void)
         }
         
         leds[i].setRGB( f->curr100x.r/100, f->curr100x.g/100, f->curr100x.b/100 );
+        //setLED( i, f->curr100x.r/100, f->curr100x.g/100, f->curr100x.b/100 );
     }
 }
-

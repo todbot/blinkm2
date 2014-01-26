@@ -1,7 +1,5 @@
  /**
-  * BlinkMmk2b --- 
-  *
-  * Some code take from TinyWireM/examples
+  * BlinkMmk2 --- 
   *
   * More on TinyWireS usage - see TinyWireS.h
   *
@@ -22,10 +20,8 @@
   */
 
 
-#include "TinyWireS.h"                  // wrapper class for I2C slave routines
-
+//#include "TinyWireS.h"                  // wrapper class for I2C slave routines
 #include "FastLED.h"
-
 #include "LEDFader.h"
 
 #include <avr/pgmspace.h>    // for memcpy_P()
@@ -34,13 +30,12 @@
 // How many leds in your strip?
 const int NUM_LEDS = 4;
 
-
 //const int DATA_PIN = 0;   // maxm A0
 const int DATA_PIN = 7; // blinkmmk2
 
 const int I2C_SLAVE_ADDR  = 0x09;     // default BlinkM addr
 
-// BlinkM MaxM pins (see below for where this came from)
+// BlinkM MaxM pins 
 const int redPin = 8;   // PB2 OC0A
 const int grnPin = 7;   // PA7 OC0B
 const int bluPin = 5;   // PA5 OC1B
@@ -51,14 +46,13 @@ const int in1Pin = A1;  // PA1
 const int in2Pin = A2;  // PA2
 const int in3Pin = A3;  // PA3
 
+
 // Define the array of leds
+//rgb_t leds[NUM_LEDS];
 CRGB leds[NUM_LEDS];
-rgbfader_t faders[NUM_LEDS];
-CRGB ctmp;
+rgb_t ctmp;
 uint16_t ttmp;   // temp time holder
 uint8_t ntmp;    // temp ledn holder
-
-LEDFader ledfader(NUM_LEDS, leds, faders); 
 
 const  uint32_t led_update_millis = 10;  // tick msec
 static uint32_t led_update_next;
@@ -69,14 +63,17 @@ const uint8_t patt_max=16;
 uint8_t playpos   = 0; // current play position
 uint8_t playstart = 0; // start play position
 uint8_t playend   = patt_max; // end play position
+uint8_t playlen   = patt_max;
 uint8_t playcount = 0; // number of times to play loop, or 0=infinite
-uint8_t playing=1; // playing values: 0=off, 1=normal, 2==playing from powerup
+uint8_t playing = 1; // playing values: 0=off, 1=normal, 2==playing from powerup
 
-patternline_t ptmp;  // temp pattern holder
-
-
+// the light sequence patterns
 #include "patterns.h"
 
+patternline_t pltmp;  // temp pattern holder
+
+rgbfader_t faders[NUM_LEDS];
+LEDFader ledfader(leds, faders, NUM_LEDS ); 
 
 //
 void setup() 
@@ -84,24 +81,58 @@ void setup()
   // load up EEPROM from flash, 
   // to deal with fact that Arduino uploader doesn't upload EEPROM
   // FIXME: need to check if we need to do this
-  for( int i=0; i<patt_max; i++ ) {
-    memcpy_P( &ptmp, &(pattern_flash[i]), sizeof(patternline_t) ); 
-    eeprom_write_block( &ptmp, &(pattern[i]), sizeof(patternline_t) );
+  //ptmp.len = patt_max;
+  //ptmp.lines = patternlines_ee;
+  //eeprom_write_block( &pltmp, &pattern_ee, sizeof(pattern_t) );
+  for( uint8_t i=0; i<patt_max; i++ ) {
+    memcpy_P( &pltmp, &(patternlines_default[i]), sizeof(patternline_t) ); 
+    eeprom_write_block( &pltmp, &(patternlines_ee[i]), sizeof(patternline_t) );
   }
 
-  //TinyWireS.begin(I2C_SLAVE_ADDR);
-
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+
+#if 0
+  for( int i=0; i< NUM_LEDS; i++ )
+    leds[i] = CRGB::Blue;
+  FastLED.show();
+  delay(2000);
+  for( int i=0; i< NUM_LEDS; i++ ) 
+    leds[i] = CRGB::Black;
+  FastLED.show();
+  delay(3000);
+#endif
+
+  //TinyWireS.begin(I2C_SLAVE_ADDR);
   
 }
 
 //
 void loop() 
 { 
-  byte cmd = 0;
 
   updateLEDs();
 
+}
+
+
+void play_pattern(uint8_t id, uint8_t reps, uint8_t startpos,uint8_t endpos)
+{
+  if( id==0 ) {
+    //play_pattern_ee(reps, startpos, endpos);
+    //playlen = ptmp.len;
+       
+  } else {
+    //play_pattern_fl(id,reps,startpos,endpos);
+    //memcpy_P( &ptmp, &patterns[id-1], sizeof(pattern_t) );
+    //playlen = ptmp.len;
+  }
+    
+}
+
+//
+void displayLEDs()
+{
+  FastLED.show();
 }
 
 //
@@ -122,15 +153,14 @@ void updateLEDs(void)
     // playing light pattern
     if( playing ) {
       if( (long)(now - pattern_update_next) > 0  ) { // time to get next line
-        //memcpy( &ptmp, &(pattern_mem[playpos]), sizeof(patternline_t) );
-        //memcpy_P( &ptmp, &(pattern_flash[playpos]), sizeof(patternline_t) ); 
-        eeprom_read_block( &ptmp, &(pattern[playpos]), sizeof(patternline_t) );
 
-        rgb_t rgbt = ptmp.color;
-        ctmp.setRGB( rgbt.r, rgbt.g, rgbt.b );
-        ttmp = ptmp.dmillis;
-        ntmp = ptmp.ledn;
-        if( ttmp == 0 && ctmp.r == 0 & ctmp.g == 0 && ctmp.b == 0) {
+        //memcpy( &ptmp, &(pattern_mem[playpos]), sizeof(patternline_t) );
+        eeprom_read_block(&pltmp,&patternlines_ee[playpos],sizeof(patternline_t));
+        //memcpy_P(&pltmp,&(patternlines_default[playpos]),sizeof(patternline_t)); 
+        ctmp = pltmp.color;
+        ttmp = pltmp.dmillis;
+        ntmp = pltmp.ledn;
+        if( ttmp == 0 && ctmp.r==0 && ctmp.g==0 && ctmp.b==0 ) {
           // skip lines set to zero
         } else {
           ledfader.setDest( &ctmp, ttmp, ntmp );
@@ -151,16 +181,16 @@ void updateLEDs(void)
 
 }
 
-//
-void displayLEDs()
+/*inline void setLED( uint8_t i, uint8_t r, uint8_t g, uint8_t b )
 {
-    FastLED.show();
-}
+  leds[i].setRGB( r,g,b );
+  }*/
 
 
 
 
 
+/*
 #if 0
       if( i == 100 ) {            // 10*100 = 1000 msec
         ctmp = CRGB::Red;
@@ -204,4 +234,4 @@ void displayLEDs()
     i++;
     if( i == NUM_LEDS ) i = 0;
 #endif
-
+*/

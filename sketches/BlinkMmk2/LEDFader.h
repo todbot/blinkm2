@@ -29,34 +29,24 @@ typedef struct {
     int stepcnt;
 } rgbfader_t;
 
-typedef struct {
-    rgb_t color;
-    uint16_t dmillis; // hundreths of a sec
-    uint8_t ledn;     // number of led, or 0 for all
-} patternline_t;
-
-typedef void (*UpdateHandler)(void);
-
 
 class LEDFader
 {
-    
- private:
-    //UpdateHandler  updateHandler;
-    int nLEDs;
-    CRGB* leds;
+    uint8_t nLEDs;
     rgbfader_t* faders;
+    CRGB* leds;
 
-    void setDestN(CRGB* newcolor, int steps, int ledn);
+    void setDestN(rgb_t* newcolor, int steps, int ledn);
     
  public:
-    LEDFader( int nleds, CRGB* leds, rgbfader_t* faders);
-    
-    //void setUpdateHandler( UpdateHandler handler );
-    
-    void setCurr(CRGB* newcolor, int steps, int ledn);
-    void setDest(CRGB* newcolor, int steps, int ledn);
+    LEDFader(CRGB* nleds, rgbfader_t* nfaders, uint8_t nnLEDs) 
+        { leds = nleds; faders = nfaders; nLEDs = nnLEDs; }
+
+    void setCurr(rgb_t* newcolor, int steps, int ledn);
+    void setDest(rgb_t* newcolor, int steps, int ledn);
     void update(void);
 };
+
+
 
 #endif
