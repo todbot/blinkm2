@@ -3,68 +3,84 @@
 #include "LEDFader.h"
 
 //
-void LEDFader::setCurr(rgb_t* newcolor, int steps, int ledn)
+void LEDFader::setCurr(rgb_t* newcolor, int ledn)
 { 
-    rgbfader_t* f = &faders[ledn];
-    f->curr100x.r = newcolor->r * 100;
-    f->curr100x.g = newcolor->g * 100;
-    f->curr100x.b = newcolor->b * 100;
+    uint8_t i=0;
+
+    if (ledn > 0) i=ledn;
+    else       ledn=nLEDs;
     
-    f->dest100x.r = f->curr100x.r;
-    f->dest100x.g = f->curr100x.g;
-    f->dest100x.b = f->curr100x.b;
-    f->stepcnt = 0;
+    // either do all or just one
+    for (; i < ledn; i++) {
+        rgbfader_t* f = &faders[ledn];
+        f->stepcnt = 0;
+        f->dest.r = newcolor->r;
+        f->dest.g = newcolor->g;
+        f->dest.b = newcolor->b;
+
+        leds[i].r = newcolor->r;
+        leds[i].g = newcolor->g;
+        leds[i].b = newcolor->b;
+    }
 }
 
 //
 void LEDFader::setDestN(rgb_t* newcolor, int steps, int ledn)
 { 
     rgbfader_t* f = &faders[ledn];
-    f->dest100x.r = newcolor->r * 100;
-    f->dest100x.g = newcolor->g * 100;
-    f->dest100x.b = newcolor->b * 100;
-    
     f->stepcnt = steps + 1;
-    
-    f->step100x.r = (f->dest100x.r - f->curr100x.r) / steps;
-    f->step100x.g = (f->dest100x.g - f->curr100x.g) / steps;
-    f->step100x.b = (f->dest100x.b - f->curr100x.b) / steps;
+    f->dest.r = newcolor->r; 
+    f->dest.g = newcolor->g; 
+    f->dest.b = newcolor->b;
+
+    CRGB old = leds[ledn];
+
+    f->m100x.r = 100* ((int)f->dest.r - old.r) / steps;
+    f->m100x.g = 100* ((int)f->dest.g - old.g) / steps;
+    f->m100x.b = 100* ((int)f->dest.b - old.b) / steps;
 }
 
 //
 void LEDFader::setDest(rgb_t* newcolor, int steps, int ledn)
 {
     if (ledn > 0) {
-        setDestN(newcolor, steps, ledn - 1);
+        setDestN(newcolor, steps, ledn-1);
     } else {
-        for (uint8_t i = 0; i < nLEDs; i++) {
+        for (uint8_t i=0; i < nLEDs; i++) {
             setDestN( newcolor, steps, i);
         }
     }
 }
 
-
 //
 void LEDFader::update(void)
 {
     for( uint8_t i=0; i<nLEDs; i++ ) {
-        //rgbfader_t f = faders[i];
         rgbfader_t* f = &faders[i];
         if( !f->stepcnt ) {
             continue;
         }
+
         f->stepcnt--;
         if( f->stepcnt ) {
-            f->curr100x.r += f->step100x.r;
-            f->curr100x.g += f->step100x.g;
-            f->curr100x.b += f->step100x.b;
-        } else {
-            f->curr100x.r = f->dest100x.r;
-            f->curr100x.g = f->dest100x.g;
-            f->curr100x.b = f->dest100x.b;
+            for( uint8_t j=0; j<3; j++) { // operate on each r,g,b indep.
+                int m100x = f->m100x.raw[j];    // slope
+                int dest100x = 100* f->dest.raw[j];      // dest color
+                uint8_t curr = leds[i].raw[j];  // curr color
+                // new color from slope, with rounding up (+50)
+                int tmpc = (100* curr) + m100x + 0 ; 
+                int err = -(tmpc - (dest100x - (m100x*(f->stepcnt-i))));
+
+                if((m100x > 0 && err>m100x) || (m100x < 0 && err<m100x) ) {
+                    tmpc += m100x;
+                }
+                leds[i].raw[j] = (tmpc + 50) / 100; // de-scale
+            }
+        } else { 
+            leds[i].r = f->dest.r;
+            leds[i].g = f->dest.g;
+            leds[i].b = f->dest.b;
         }
-        
-        leds[i].setRGB( f->curr100x.r/100, f->curr100x.g/100, f->curr100x.b/100 );
-        //setLED( i, f->curr100x.r/100, f->curr100x.g/100, f->curr100x.b/100 );
+
     }
 }

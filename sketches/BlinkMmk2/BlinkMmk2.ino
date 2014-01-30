@@ -28,7 +28,8 @@
 #include <avr/eeprom.h>  // FOR EEMEM
 
 // How many leds in your strip?
-const int NUM_LEDS = 4;
+//const int NUM_LEDS = 4;
+const int NUM_LEDS = 1;
 
 //const int DATA_PIN = 0;   // maxm A0
 const int DATA_PIN = 7; // blinkmmk2
@@ -48,7 +49,6 @@ const int in3Pin = A3;  // PA3
 
 
 // Define the array of leds
-//rgb_t leds[NUM_LEDS];
 CRGB leds[NUM_LEDS];
 rgb_t ctmp;
 uint16_t ttmp;   // temp time holder
@@ -109,24 +109,7 @@ void setup()
 //
 void loop() 
 { 
-
   updateLEDs();
-
-}
-
-
-void play_pattern(uint8_t id, uint8_t reps, uint8_t startpos,uint8_t endpos)
-{
-  if( id==0 ) {
-    //play_pattern_ee(reps, startpos, endpos);
-    //playlen = ptmp.len;
-       
-  } else {
-    //play_pattern_fl(id,reps,startpos,endpos);
-    //memcpy_P( &ptmp, &patterns[id-1], sizeof(pattern_t) );
-    //playlen = ptmp.len;
-  }
-    
 }
 
 //
@@ -143,11 +126,8 @@ void updateLEDs(void)
     // update LED for fading every led_update_millis
     if( (long)(now - led_update_next) > 0 ) { 
       led_update_next += led_update_millis;
-
       ledfader.update();
-
       displayLEDs();
-
     }
     
     // playing light pattern
@@ -181,12 +161,26 @@ void updateLEDs(void)
 
 }
 
+
+void play_pattern(uint8_t id, uint8_t reps, uint8_t startpos,uint8_t endpos)
+{
+  if( id==0 ) {
+    //play_pattern_ee(reps, startpos, endpos);
+    //playlen = ptmp.len;
+       
+  } else {
+    //play_pattern_fl(id,reps,startpos,endpos);
+    //memcpy_P( &ptmp, &patterns[id-1], sizeof(pattern_t) );
+    //playlen = ptmp.len;
+  }
+    
+}
+
+
 /*inline void setLED( uint8_t i, uint8_t r, uint8_t g, uint8_t b )
 {
   leds[i].setRGB( r,g,b );
   }*/
-
-
 
 
 

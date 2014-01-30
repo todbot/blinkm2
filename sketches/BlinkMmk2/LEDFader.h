@@ -8,25 +8,30 @@
 #include "pixeltypes.h"
 
 // RGB triplet of 8-bit vals for input/output use
-typedef struct {
-    uint8_t g;
-    uint8_t r;
-    uint8_t b;
+typedef union {
+    struct {
+        uint8_t g;
+        uint8_t r;
+        uint8_t b;
+    }; 
+    uint8_t raw[3];
 } rgb_t;
 
 // RGB triplet unsigned ints for internal use of 100x scale
 // used instead of floating point
-typedef struct {
-    int g;
-    int r;
-    int b;
+typedef union {
+    struct {
+        int16_t g;
+        int16_t r;
+        int16_t b;
+    };
+    int16_t raw[3];
 } rgbint_t;
 
 typedef struct {
-    rgbint_t dest100x;  // the eventual destination color we want to hit
-    rgbint_t step100x;  // the amount of to move each tick
-    rgbint_t curr100x;  // the current color, times 10 (to lessen int trunc issue)
-    int stepcnt;
+    rgb_t dest;  // the eventual destination color we want to hit
+    rgbint_t m100x;  // slope of the amount of to move each tick
+    int stepcnt;  // number of steps for our fade run
 } rgbfader_t;
 
 
@@ -42,8 +47,8 @@ class LEDFader
     LEDFader(CRGB* nleds, rgbfader_t* nfaders, uint8_t nnLEDs) 
         { leds = nleds; faders = nfaders; nLEDs = nnLEDs; }
 
-    void setCurr(rgb_t* newcolor, int steps, int ledn);
-    void setDest(rgb_t* newcolor, int steps, int ledn);
+    void setCurr(rgb_t* color, int ledn);
+    void setDest(rgb_t* color, int steps, int ledn);
     void update(void);
 };
 
