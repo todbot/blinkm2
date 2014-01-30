@@ -1,0 +1,161 @@
+
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "fader.h"
+
+#define NUM_LEDS 14
+
+rgb_t leds[NUM_LEDS];
+rgbfader_t faders[NUM_LEDS];
+Fader ledfader(leds, faders, NUM_LEDS ); 
+
+
+/*
+void plotLine(int x0, int y0, int x1, int y1)
+{
+    int dx =  abs(x1-x0);
+    int sx = x0<x1 ? 1 : -1;
+    int dy = -abs(y1-y0);
+    int sy = y0<y1 ? 1 : -1; 
+    int err = dx+dy;
+    int e2; // error value e_xy 
+ 
+    for(;;){  // loop 
+
+       printf("%d : %d\n",x0,y0);
+
+       if (x0==x1 && y0==y1) break;
+       e2 = 2*err;
+       if (e2 >= dy) { err += dy; x0 += sx; } // e_xy+e_x > 0 
+       if (e2 <= dx) { err += dx; y0 += sy; } // e_xy+e_y < 0 
+   }
+}
+
+int oldColor,newColor;
+void lightLEDs (int howMany)
+{
+    int tmpColor = oldColor;
+
+    for (int i = 1; i <= howMany; i++)
+    {
+        if (newColor != oldColor)
+        {
+            tmpColor = 255 * i;
+            tmpColor = tmpColor / howMany;
+
+            if (newColor > oldColor)
+                tmpColor = 0 + tmpColor;
+            else
+                tmpColor = 255 - tmpColor;
+        }
+
+        if( tmpColor> 255 ) tmpColor = 255;
+        if( tmpColor < 0 ) tmpColor = 0;
+        printf("lightLEDS: %d %d  %3d : %d\n", i, oldColor, howMany,  tmpColor);
+    }
+}
+*/
+
+// takes as setup: oldColor, newColor, steps
+// curColor is current
+void fadeBySteps(int oldColor, int newColor, int steps)
+{
+    printf("\nfadeBySteps: %d -> %d : %d\n", oldColor, newColor, steps);
+
+    int curColor;
+
+    // fadeBySteps setup
+    float slope = ((float)newColor-oldColor)/steps;
+    float err=0;
+    curColor = oldColor;
+
+    for( int i=0; i< steps; i++ ) { 
+        //float tmpColor = (float) curColor + slope;
+        float tmpColor = (float) curColor + slope + 0.5f; // 0.5 for rounding
+        //curColor = curColor + slope;
+        //err = curColor - ((i*slope) + oldColor);
+        // no, use just newColor
+        // then state needed:
+        //  newColor (1), slope (2), steps (2)
+        //err = curColor - (newColor - (slope*(steps-i-1)));
+        // above only works for positive slope
+        if( slope >= 0 ) 
+            err = tmpColor - (newColor - (slope*(steps-i-1)));
+        else 
+            err = tmpColor - (-(slope*(steps-i-1)) + newColor);
+        int flag=0;
+        // hmmm, this is pretty basic error accumulation 
+        //if( err >  slope ) { tmpColor -= slope; flag =  1; }
+        //if( err < -slope ) { tmpColor += slope; flag = -1; }
+        tmpColor -= (err/slope)*slope; flag = (err/slope); 
+
+        /*
+        if( slope > 0 && err > slope ) { 
+            //tmpColor -= slope; flag =  1; 
+            tmpColor -= (err/slope)*slope; flag =  (err/slope); 
+        }
+        if( slope < 0 && err < slope ) {
+            //tmpColor += slope; flag = -1; 
+            tmpColor += (-err/slope)*slope; flag =  -(err/slope); 
+        }
+        */
+        //curColor = tmpColor + 0.5f; // 0.5 for rounding
+        curColor = tmpColor;
+        printf("%3d: slope:%4.3f cur:%3d err:%3.2f   %3d\n",
+               i, slope, curColor, err, flag);
+    }
+    curColor = newColor; // fixme: make err use newColor as 
+}
+
+int main()
+{
+    printf("hello\n");
+
+    fadeBySteps(7, 100, 50);
+    fadeBySteps(100, 7, 50);
+    fadeBySteps(101, 3, 21);
+    fadeBySteps(0, 101, 23);
+    fadeBySteps(23, 231, 100);
+
+    exit(0);
+
+    // 30 stps, fade from 0-200 color
+    //plotLine( 0, 0, 30, 200 );
+    //oldColor = 0;
+    //newColor = 200;
+    //lightLEDs(300);
+
+    //ctmp.r=0; ctmp.g=0; ctmp.b=0;
+    //ledfader.setDest( &ctmp, 10, ln );
+    //ledfader.update();
+    //ledfader.update();
+
+    rgb_t ctmp; // = { 255,255,255 };
+    int ttmp = 15;
+    int ln = 5;
+
+    ctmp.r=25; ctmp.g=250; ctmp.b=55;
+    ledfader.setDest( &ctmp, 50, ln );
+
+    for( int i=0; i< 55; i++) {
+        ledfader.update();
+    }
+
+    ctmp.r=125; ctmp.g=2; ctmp.b=255;
+    ledfader.setDest( &ctmp, 20, ln );
+
+    for( int i=0; i< 25; i++) {
+        ledfader.update();
+    }
+
+    ctmp.r=255; ctmp.g=200; ctmp.b=0;
+    ledfader.setDest( &ctmp, 1000, ln );
+
+    for( int i=0; i< 1010; i++) {
+        ledfader.update();
+    }
+
+}
