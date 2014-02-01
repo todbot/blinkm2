@@ -3,9 +3,11 @@
 #ifndef LEDFader_h
 #define LEDFader_h
 
-#include "inttypes.h"
+#include <inttypes.h>
 
 #include "pixeltypes.h"
+
+//#include "printf_wrapper.h"
 
 // RGB triplet of 8-bit vals for input/output use
 typedef union {
@@ -15,6 +17,7 @@ typedef union {
         uint8_t b;
     }; 
     uint8_t raw[3];
+
 } rgb_t;
 
 // RGB triplet unsigned ints for internal use of 100x scale
