@@ -44,7 +44,7 @@ void LEDFader::setDestN(rgb_t* newcolor, int steps, int ledn)
 void LEDFader::setDest(rgb_t* newcolor, int steps, int ledn)
 {
     if (ledn > 0) {
-        setDestN(newcolor, steps, ledn-1);
+        setDestN( newcolor, steps, ledn-1);
     } else {
         for (uint8_t i=0; i < nLEDs; i++) {
             setDestN( newcolor, steps, i);
@@ -55,6 +55,9 @@ void LEDFader::setDest(rgb_t* newcolor, int steps, int ledn)
 //
 void LEDFader::update(void)
 {
+    int16_t m100x, dest100x, tmpc, err;
+    uint8_t curr;
+
     for( uint8_t i=0; i<nLEDs; i++ ) {
         rgbfader_t* f = &faders[i];
         if( !f->stepcnt ) {
@@ -63,19 +66,21 @@ void LEDFader::update(void)
 
         f->stepcnt--;
         if( f->stepcnt ) {
+
             for( uint8_t j=0; j<3; j++) { // operate on each r,g,b indep.
-                int m100x = f->m100x.raw[j];    // slope
-                int dest100x = 100* f->dest.raw[j];      // dest color
-                uint8_t curr = leds[i].raw[j];  // curr color
+                m100x = f->m100x.raw[j];    // slope
+                dest100x = 100* f->dest.raw[j];      // dest color
+                curr = leds[i].raw[j];  // curr color
                 // new color from slope, with rounding up (+50)
-                int tmpc = (100* curr) + m100x + 0 ; 
-                int err = -(tmpc - (dest100x - (m100x*(f->stepcnt-i))));
+                tmpc = (100* curr) + m100x + 0 ; 
+                err = -(tmpc - (dest100x - (m100x*(f->stepcnt-i))));
 
                 if((m100x > 0 && err>m100x) || (m100x < 0 && err<m100x) ) {
                     tmpc += m100x;
                 }
                 leds[i].raw[j] = (tmpc + 50) / 100; // de-scale
             }
+
         } else { 
             leds[i].r = f->dest.r;
             leds[i].g = f->dest.g;

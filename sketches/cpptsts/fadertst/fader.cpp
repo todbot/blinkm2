@@ -2,7 +2,6 @@
 
 #include "Fader.h"
 
-#include <stdio.h>
 
 //
 void Fader::setCurr(rgb_t* newcolor, int ledn)

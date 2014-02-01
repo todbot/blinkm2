@@ -28,8 +28,8 @@
 #include <avr/eeprom.h>  // FOR EEMEM
 
 // How many leds in your strip?
-//const int NUM_LEDS = 4;
-const int NUM_LEDS = 1;
+const int NUM_LEDS = 4;
+//const int NUM_LEDS = 1;
 
 //const int DATA_PIN = 0;   // maxm A0
 const int DATA_PIN = 7; // blinkmmk2
@@ -55,8 +55,8 @@ uint16_t ttmp;   // temp time holder
 uint8_t ntmp;    // temp ledn holder
 
 const  uint32_t led_update_millis = 10;  // tick msec
-static uint32_t led_update_next;
-static uint32_t pattern_update_next;
+static uint32_t led_update_next = 0;
+static uint32_t pattern_update_next = 0;
 
 const uint8_t patt_max=16;
 
@@ -91,13 +91,17 @@ void setup()
 
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
 
-#if 0
+#if 1
   for( int i=0; i< NUM_LEDS; i++ )
-    leds[i] = CRGB::Blue;
+    leds[i] = 0x000080;
+  FastLED.show();
+  delay(1000);
+  for( int i=0; i< NUM_LEDS; i++ )
+    leds[i] = 0x008000;
   FastLED.show();
   delay(2000);
   for( int i=0; i< NUM_LEDS; i++ ) 
-    leds[i] = CRGB::Black;
+    leds[i] = 0x000000;
   FastLED.show();
   delay(3000);
 #endif
@@ -110,6 +114,7 @@ void setup()
 void loop() 
 { 
   updateLEDs();
+  delay(1);
 }
 
 //
@@ -134,9 +139,9 @@ void updateLEDs(void)
     if( playing ) {
       if( (long)(now - pattern_update_next) > 0  ) { // time to get next line
 
-        //memcpy( &ptmp, &(pattern_mem[playpos]), sizeof(patternline_t) );
-        eeprom_read_block(&pltmp,&patternlines_ee[playpos],sizeof(patternline_t));
-        //memcpy_P(&pltmp,&(patternlines_default[playpos]),sizeof(patternline_t)); 
+        memcpy( &pltmp, &patternlines_mem[playpos], sizeof(patternline_t) );
+      //eeprom_read_block(&pltmp,&patternlines_ee[playpos],sizeof(patternline_t));
+      //memcpy_P(&pltmp,&(patternlines_default[playpos]),sizeof(patternline_t)); 
         ctmp = pltmp.color;
         ttmp = pltmp.dmillis;
         ntmp = pltmp.ledn;

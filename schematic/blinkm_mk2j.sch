@@ -6614,7 +6614,7 @@ We've spent an enormous amount of time creating and checking these footprints an
 <instance part="SUPPLY1" gate="1" x="165.1" y="127"/>
 <instance part="SUPPLY2" gate="1" x="220.98" y="154.94"/>
 <instance part="SUPPLY3" gate="1" x="220.98" y="134.62"/>
-<instance part="SUPPLY4" gate="1" x="149.86" y="172.72"/>
+<instance part="SUPPLY4" gate="1" x="152.4" y="175.26"/>
 <instance part="SW1" gate="G$1" x="96.52" y="50.8" rot="R270"/>
 <instance part="GND18" gate="1" x="101.6" y="43.18"/>
 <instance part="SW2" gate="G$1" x="127" y="50.8" rot="R270"/>
@@ -6776,9 +6776,9 @@ We've spent an enormous amount of time creating and checking these footprints an
 <wire x1="251.46" y1="106.68" x2="251.46" y2="76.2" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="CN1" gate="G$1" pin="2"/>
-<wire x1="160.02" y1="172.72" x2="154.94" y2="172.72" width="0.1524" layer="91"/>
-<label x="154.94" y="172.72" size="1.778" layer="95"/>
+<pinref part="CN1" gate="G$1" pin="3"/>
+<wire x1="160.02" y1="170.18" x2="152.4" y2="170.18" width="0.1524" layer="91"/>
+<label x="152.4" y="170.18" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="DI" class="0">
@@ -6890,7 +6890,7 @@ We've spent an enormous amount of time creating and checking these footprints an
 <label x="83.82" y="45.72" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="N$1" class="0">
+<net name="DOI1" class="0">
 <segment>
 <pinref part="LED1" gate="G$1" pin="DO"/>
 <pinref part="LED2" gate="G$1" pin="DI"/>
@@ -6918,15 +6918,15 @@ We've spent an enormous amount of time creating and checking these footprints an
 <pinref part="SUPPLY3" gate="1" pin="VCC"/>
 </segment>
 <segment>
-<pinref part="CN1" gate="G$1" pin="3"/>
-<wire x1="160.02" y1="170.18" x2="149.86" y2="170.18" width="0.1524" layer="91"/>
-<wire x1="149.86" y1="170.18" x2="149.86" y2="172.72" width="0.1524" layer="91"/>
-<pinref part="SUPPLY4" gate="1" pin="VCC"/>
-</segment>
-<segment>
 <pinref part="LED3" gate="G$1" pin="VDD"/>
 <pinref part="SUPPLY5" gate="1" pin="VCC"/>
 <wire x1="220.98" y1="114.3" x2="223.52" y2="114.3" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="CN1" gate="G$1" pin="2"/>
+<pinref part="SUPPLY4" gate="1" pin="VCC"/>
+<wire x1="160.02" y1="172.72" x2="152.4" y2="172.72" width="0.1524" layer="91"/>
+<wire x1="152.4" y1="172.72" x2="152.4" y2="175.26" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="LEDEN" class="0">
@@ -6941,7 +6941,7 @@ We've spent an enormous amount of time creating and checking these footprints an
 <label x="76.2" y="93.98" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="N$2" class="0">
+<net name="DOI2" class="0">
 <segment>
 <pinref part="LED2" gate="G$1" pin="DO"/>
 <pinref part="LED3" gate="G$1" pin="DI"/>

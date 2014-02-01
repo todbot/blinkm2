@@ -15,25 +15,67 @@ struct patternline_t {
 //pattern_t pattern_ee EEMEM; 
 patternline_t patternlines_ee[patt_max] EEMEM;
 
+patternline_t patternlines_mem[]  = {
+    //    G     R     B    fade ledn
+    { { 0x00, 0x11, 0x00 }, 100, 0 }, // 0  red A
+    { { 0x00, 0x33, 0x00 }, 100, 0 }, // 1  red B
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 2  off both
+    { { 0x11, 0x00, 0x00 }, 100, 0 }, // 3  grn A
+    { { 0x33, 0x00, 0x00 }, 100, 0 }, // 4  grn B
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 5  off both
+    { { 0x00, 0x00, 0x11 }, 100, 0 }, // 6  blu A
+    { { 0x00, 0x00, 0x33 }, 100, 0 }, // 7  blu B
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 8  off both
+    { { 0x10, 0x10, 0x10 }, 100, 0 }, // 9  half-bright, both LEDs
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 10 off both
+    { { 0x11, 0x11, 0x11 }, 100, 0 }, // 11 white A
+    { { 0x20, 0x20, 0x20 }, 100, 0 }, // 12 off A
+    { { 0x30, 0x30, 0x30 }, 100, 0 }, // 13 white B
+    { { 0x40, 0x40, 0x40 }, 100, 0 }, // 14 off B
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
+};
+
+patternline_t patternlines_default[] PROGMEM = {
+    //    G     R     B    fade ledn
+    { { 0x00, 0x11, 0x00 },  100, 0 }, // 0  red A
+    { { 0x00, 0x11, 0x00 },  100, 0 }, // 1  red B
+    { { 0x00, 0x00, 0x00 },  100, 0 }, // 2  off both
+    { { 0x11, 0x00, 0x00 },  100, 0 }, // 3  grn A
+    { { 0x11, 0x00, 0x00 },  100, 0 }, // 4  grn B
+    { { 0x00, 0x00, 0x00 },  100, 0 }, // 5  off both
+    { { 0x00, 0x00, 0x11 },  100, 0 }, // 6  blu A
+    { { 0x00, 0x00, 0x11 },  100, 0 }, // 7  blu B
+    { { 0x00, 0x00, 0x00 },  100, 0 }, // 8  off both
+    { { 0x10, 0x10, 0x10 }, 100, 0 }, // 9  half-bright, both LEDs
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 10 off both
+    { { 0x11, 0x11, 0x11 },  50, 0 }, // 11 white A
+    { { 0x00, 0x00, 0x00 },  50, 0 }, // 12 off A
+    { { 0x7f, 0x7f, 0x7f },  50, 0 }, // 13 white B
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 14 off B
+    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
+};
+
+#if 0
 patternline_t patternlines_default[] PROGMEM = {
     //    G     R     B    fade ledn
     { { 0x00, 0x11, 0x00 },  100, 1 }, // 0  red A
-    { { 0x00, 0xff, 0x00 },  100, 2 }, // 1  red B
+    { { 0x00, 0x11, 0x00 },  100, 2 }, // 1  red B
     { { 0x00, 0x00, 0x00 },  100, 0 }, // 2  off both
-    { { 0xff, 0x00, 0x00 },  100, 1 }, // 3  grn A
+    { { 0x11, 0x00, 0x00 },  100, 1 }, // 3  grn A
     { { 0x11, 0x00, 0x00 },  100, 2 }, // 4  grn B
     { { 0x00, 0x00, 0x00 },  100, 0 }, // 5  off both
-    { { 0x00, 0x00, 0xff },  100, 1 }, // 6  blu A
-    { { 0x00, 0x00, 0xff },  100, 2 }, // 7  blu B
+    { { 0x00, 0x00, 0x11 },  100, 1 }, // 6  blu A
+    { { 0x00, 0x00, 0x11 },  100, 2 }, // 7  blu B
     { { 0x00, 0x00, 0x00 },  100, 0 }, // 8  off both
     { { 0x10, 0x10, 0x10 }, 100, 0 }, // 9  half-bright, both LEDs
     { { 0x00, 0x00, 0x00 }, 100, 0 }, // 10 off both
     { { 0x11, 0x11, 0x11 },  50, 1 }, // 11 white A
     { { 0x00, 0x00, 0x00 },  50, 1 }, // 12 off A
-    { { 0xff, 0xff, 0xff },  50, 2 }, // 13 white B
+    { { 0x7f, 0x7f, 0x7f },  50, 2 }, // 13 white B
     { { 0x00, 0x00, 0x00 }, 100, 2 }, // 14 off B
     { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
 };
+#endif
 
 patternline_t patternlines_rgb[] PROGMEM = {
     { { 0x00, 0x11, 0x00 },  50, 0 }, // 0  red all
