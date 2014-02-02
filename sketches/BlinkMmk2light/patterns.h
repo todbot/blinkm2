@@ -58,18 +58,18 @@ patt_line_t patt_lines_default[] PROGMEM = {
 };
 */
 
-patt_line_t patt_lines_rgb[] PROGMEM = {
+patt_line_t patt_lines_rgb0[] PROGMEM = {
     {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0 }}, // 0  red all
     {{ 'c', { 0x00, 0x33, 0x00 }, 100, 0 }}, // 0  red all
     {{ 'c', { 0x00, 0x00, 0x33 }, 100, 0 }}, // 1  grn all
     {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0 }}, // 1  grn all
 };
 
-patt_line_t patt_lines_rgb0[] PROGMEM = {
-    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0b1111111100000000 }}, // 0  red all
-    {{ 'c', { 0x00, 0x33, 0x00 }, 100, 0b0000000010101010 }}, // 1  grn all
-    {{ 'c', { 0x00, 0x00, 0x33 }, 100, 0b1111111100000000 }}, // 2  blu all
-    {{ 'c', { 0x33, 0x33, 0x33 }, 100, 0b0000000010101010 }}, // 2  wht all
+patt_line_t patt_lines_rgb[] PROGMEM = {
+    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0b1111111100000010 }}, // 0  red all
+    {{ 'n', { 0x00, 0x33, 0x00 }, 100, 0b0000000010101010 }}, // 1  grn all
+    {{ 'n', { 0x00, 0x00, 0x33 }, 100, 0b1111111100001100 }}, // 2  blu all
+    {{ 'n', { 0x33, 0x33, 0x33 }, 100, 0b0000000010101111 }}, // 2  wht all
     {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0b1111111111111111 }}, // 1  off all
 };
 

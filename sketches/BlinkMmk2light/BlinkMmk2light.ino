@@ -38,7 +38,7 @@
 
 // How many leds in your strip?
 //const int NUM_LEDS = 4;
-const int nLEDs = 15;
+const int nLEDs = 16;
 
 //const int DATA_PIN = 0;   // maxm A0
 const int DATA_PIN = 7; // blinkmmk2
@@ -84,6 +84,8 @@ patt_info_t patt_info;
 
 patt_line_t pltmp;  // temp pattern holder
 
+uint8_t inputs[4];
+
 
 //-----------------------------
 #include "ledfader_funcs.h"
@@ -105,14 +107,16 @@ void setup()
       eeprom_write_block( &pltmp, &(ee_patt_lines[i]), sizeof(patt_line_t) );
   }
   
-  ledfader_setCurr(0, 0);
+  ctmp.r = ctmp.g = ctmp.b = 0;
+  ledfader_setCurr(ctmp, 0);
 
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, nLEDs);
+  FastLED.show();
+  delay(500);
 
   /*
   DDRA |= _BV(PA7);
   //DDRB | _BV(PORTB7);
-
   leds[0].r=32; leds[0].g=32; leds[0].b=32;
   leds[3].r=64; leds[3].g=0; leds[3].b=64;
   ws2812_sendarray((uint8_t*)leds, nLEDs*3);
@@ -121,6 +125,18 @@ void setup()
   ws2812_sendarray((uint8_t*)leds, nLEDs*3);
   delay(3000);
   */
+
+#if 1
+  for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000020;
+  FastLED.show();
+  delay(500);
+  for( int i=0; i< nLEDs; i++ )  leds[i] = 0x002000;
+  FastLED.show();
+  delay(500);
+  for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000000;
+  FastLED.show();
+  delay(500);
+#endif
 
   led_update_next = millis();
   pattern_update_next = millis();
@@ -133,6 +149,7 @@ void setup()
 void loop() 
 { 
   updateLEDs();
+  handleInputs();
 }
 
 //
@@ -154,7 +171,7 @@ void start_playing(void)
   patt_info.id    = 1;
 
   patt_info.start = 0;
-  patt_info.end   = 3;
+  patt_info.end   = 4;
   //patt_info.start = 0;
   //patt_info.end = patt_max;
   patt_info.count = 0;
@@ -166,6 +183,16 @@ void start_playing(void)
   playing = 1;
 }
 
+//
+void handleInputs(void)
+{
+    inputs[0] = analogRead( 0 );
+    inputs[1] = analogRead( 1 );
+    inputs[2] = analogRead( 5 );
+    inputs[3] = analogRead( 6 );
+}
+
+//
 void handlePattLine(void)
 {
     rgb_t    ctmp = pltmp.color;
@@ -177,10 +204,13 @@ void handlePattLine(void)
         return;
     }
 
-    switch(cmd) {
+    switch( cmd ) {
     case('n'): // go to rgb immediately
         ttmp = 1;  // and fall thru to 'c' case
     case('c'): // fade to rgb
+        //ctmp.r = gamma(ctmp.r);
+        //ctmp.g = gamma(ctmp.g);
+        //ctmp.b = gamma(ctmp.b);
         ledfader_setDest( ctmp, ttmp, ntmp );
         break;
     case('C'):  // random rgb
@@ -188,6 +218,9 @@ void handlePattLine(void)
         ctmp.g = gamma(random(255));
         ctmp.b = gamma(random(255));
         ledfader_setDest( ctmp, ttmp, ntmp );
+        break;
+    case('i'):
+        ttmp = analogRead( pltmp.args[1] );
         break;
     case('o'):
         playing = 0;
@@ -277,5 +310,5 @@ uint8_t GammaE[] PROGMEM = {
 //
 static uint8_t gamma( uint8_t n ) 
 {
-    return n; //pgm_read_byte( &GammaE[n] );
+    return pgm_read_byte( &GammaE[n] );
 }
