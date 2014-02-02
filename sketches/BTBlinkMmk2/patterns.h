@@ -2,26 +2,8 @@
 #ifndef PATTERNS_H
 #define PATTERNS_H
 
-#include "LEDFader.h"  // for rgb_t
+//#include "blinkm_types.h"  // for rgb_t
 
-//struct patt_line_t {
-typedef union { 
-    struct { 
-        uint8_t cmd;
-        rgb_t color;
-        uint16_t dmillis; // hundreths of a sec
-        uint16_t ledn;     // number of led, or 0 for all
-    };
-    uint8_t args[8];
-} patt_line_t;
-
-struct patt_info_t { 
-    uint8_t id;
-    uint8_t reps;
-    uint8_t start;
-    uint8_t end;
-    uint8_t count;
-};
 
 // can't declare these statically because Arduino loader doesn't send eeprom
 //pattern_t pattern_ee EEMEM; 
