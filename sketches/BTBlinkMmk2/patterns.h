@@ -4,11 +4,16 @@
 
 #include "LEDFader.h"  // for rgb_t
 
-struct patt_line_t {
-    rgb_t color;
-    uint16_t dmillis; // hundreths of a sec
-    uint16_t ledn;     // number of led, or 0 for all
-};
+//struct patt_line_t {
+typedef union { 
+    struct { 
+        uint8_t cmd;
+        rgb_t color;
+        uint16_t dmillis; // hundreths of a sec
+        uint16_t ledn;     // number of led, or 0 for all
+    };
+    uint8_t args[8];
+} patt_line_t;
 
 struct patt_info_t { 
     uint8_t id;
@@ -31,23 +36,24 @@ patt_info_t ee_patt_info  EEMEM;
 patt_line_t ee_patt_lines[patt_max] EEMEM;
 
 patt_line_t patt_lines_default[] PROGMEM  = {
-    //    R     G     B    fade ledn
-    { { 0x11, 0x00, 0x00 }, 50, 0 }, // 0  red A
-    { { 0x73, 0x00, 0x00 }, 50, 0 }, // 1  red B
-    { { 0x00, 0x00, 0x00 }, 50, 0 }, // 2  off both
-    { { 0x00, 0x11, 0x00 }, 50, 0 }, // 3  grn A
-    { { 0x00, 0x73, 0x00 }, 50, 0 }, // 4  grn B
-    { { 0x00, 0x00, 0x00 }, 50, 0 }, // 5  off both
-    { { 0x00, 0x00, 0x11 }, 50, 0 }, // 6  blu A
-    { { 0x00, 0x00, 0x73 }, 50, 0 }, // 7  blu B
-    { { 0x00, 0x00, 0x00 },100, 0 }, // 8  off both
-    { { 0x10, 0x10, 0x10 }, 50, 0 }, // 9  half-bright, both LEDs
-    { { 0x00, 0x00, 0x00 }, 50, 0 }, // 10 off both
-    { { 0x11, 0x11, 0x11 }, 50, 0 }, // 11 white A
-    { { 0x20, 0x20, 0x20 }, 50, 0 }, // 12 off A
-    { { 0x30, 0x30, 0x30 }, 50, 0 }, // 13 white B
-    { { 0x40, 0x40, 0x40 }, 50, 0 }, // 14 off B
-    { { 0x00, 0x00, 0x00 }, 50, 0 }, // 15 off everyone
+    // cmd      R     G     B    fade ledn
+    {{ 'c', { 0x11, 0x00, 0x00 }, 50, 0 }}, // 0  red A
+    {{ 'c', { 0x73, 0x00, 0x00 }, 50, 0 }}, // 1  red B
+    {{ 'c', { 0x00, 0x00, 0x00 }, 50, 0 }}, // 2  off both
+    {{ 'c', { 0x00, 0x11, 0x00 }, 50, 0 }}, // 3  grn A
+    {{ 'c', { 0x00, 0x73, 0x00 }, 50, 0 }}, // 4  grn B
+    {{ 'c', { 0x00, 0x00, 0x00 }, 50, 0 }}, // 5  off both
+    {{ 'c', { 0x00, 0x00, 0x11 }, 50, 0 }}, // 6  blu A
+    {{ 'c', { 0x00, 0x00, 0x73 }, 50, 0 }}, // 7  blu B
+    {{ 'c', { 0x00, 0x00, 0x00 },100, 0 }}, // 8  off both
+    {{ 'c', { 0x10, 0x10, 0x10 }, 50, 0 }}, // 9  half-bright, both LEDs
+    {{ 'c', { 0x00, 0x00, 0x00 }, 50, 0 }}, // 10 off both
+    {{ 'c', { 0x11, 0x11, 0x11 }, 50, 0 }}, // 11 white A
+    {{ 'c', { 0x20, 0x20, 0x20 }, 50, 0 }}, // 12 off A
+    {{ 'c', { 0x30, 0x30, 0x30 }, 50, 0 }}, // 13 white B
+    {{ 'c', { 0x40, 0x40, 0x40 }, 50, 0 }}, // 14 off B
+    {{ 'c', { 0x00, 0x00, 0x00 }, 50, 0 }}, // 15 off everyone
+  //{{ 'p', 3, 0, 4,  0,  0 }},
 };
 
 /*
@@ -72,50 +78,39 @@ patt_line_t patt_lines_default[] PROGMEM = {
 };
 */
 
-#if 0
-patt_line_t patt_lines_default[] PROGMEM = {
-    //    G     R     B    fade ledn
-    { { 0x00, 0x11, 0x00 },  100, 1 }, // 0  red A
-    { { 0x00, 0x11, 0x00 },  100, 2 }, // 1  red B
-    { { 0x00, 0x00, 0x00 },  100, 0 }, // 2  off both
-    { { 0x11, 0x00, 0x00 },  100, 1 }, // 3  grn A
-    { { 0x11, 0x00, 0x00 },  100, 2 }, // 4  grn B
-    { { 0x00, 0x00, 0x00 },  100, 0 }, // 5  off both
-    { { 0x00, 0x00, 0x11 },  100, 1 }, // 6  blu A
-    { { 0x00, 0x00, 0x11 },  100, 2 }, // 7  blu B
-    { { 0x00, 0x00, 0x00 },  100, 0 }, // 8  off both
-    { { 0x10, 0x10, 0x10 }, 100, 0 }, // 9  half-bright, both LEDs
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 10 off both
-    { { 0x11, 0x11, 0x11 },  50, 1 }, // 11 white A
-    { { 0x00, 0x00, 0x00 },  50, 1 }, // 12 off A
-    { { 0x7f, 0x7f, 0x7f },  50, 2 }, // 13 white B
-    { { 0x00, 0x00, 0x00 }, 100, 2 }, // 14 off B
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
+patt_line_t patt_lines_rgb0[] PROGMEM = {
+    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0b1001001001001001 }}, // 0  red all
+    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0b1001001001001001 }}, // 0  red all
+    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0b0010010010010010 }}, // 1  grn all
+    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0b0010010010010010 }}, // 1  grn all
 };
-#endif
 
 patt_line_t patt_lines_rgb[] PROGMEM = {
-    { { 0x33, 0x00, 0x00 },  50, 0b0110110110110110 }, // 0  red all
-    { { 0x00, 0x33, 0x00 },  50, 0b1010101010101010 }, // 1  grn all
-    { { 0x00, 0x00, 0x33 },  50, 0b0001000100010001 }, // 2  blu all
+    {{ 'C', { 0x33, 0x00, 0x00 }, 100, 0b1111111100000000 }}, // 0  red all
+    {{ 'n', { 0x00, 0x33, 0x00 }, 100, 0b0000000010101010 }}, // 1  grn all
+    {{ 'n', { 0x00, 0x00, 0x33 }, 100, 0b1111111100000000 }}, // 2  blu all
+    {{ 'n', { 0x33, 0x33, 0x33 }, 100, 0b0000000010101010 }}, // 2  wht all
+    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0b1111111111111111 }}, // 1  off all
 };
 
+/*
 patt_line_t patt_lines_blink_white[] PROGMEM = {
-    { { 0x33, 0x33, 0x33 },  50, 0 }, // 0  white all
-    { { 0x00, 0x00, 0x00 },  50, 0 }, // 1  off all
+    { { 0x33, 0x33, 0x33 },  50, 0, 'c' }, // 0  white all
+    { { 0x00, 0x00, 0x00 },  50, 0, 'c' }, // 1  off all
 };
 
 patt_line_t patt_lines_stoplight[] PROGMEM = {
-    { { 0x00, 0x33, 0x00 },  50, 0 }, // 0  red
-    { { 0xdd, 0x11, 0x00 },  50, 0 }, // 1  yellow
-    { { 0x00, 0x33, 0x11 },  50, 0 }, // 1  greenblue
+    { { 0x00, 0x33, 0x00 },  50, 0, 'c' }, // 0  red
+    { { 0xdd, 0x11, 0x00 },  50, 0, 'c' }, // 1  yellow
+    { { 0x00, 0x33, 0x11 },  50, 0, 'c' }, // 1  greenblue
 };
+*/
 
 patt_line_t* patterns[] PROGMEM = {
     (patt_line_t*) &patt_lines_default,
     (patt_line_t*) &patt_lines_rgb,
-    (patt_line_t*) &patt_lines_blink_white,
-    (patt_line_t*) &patt_lines_stoplight,
+    //(patt_line_t*) &patt_lines_blink_white,
+    //(patt_line_t*) &patt_lines_stoplight,
 };
 
 // this is so lame, but can't create a flexible array of patt_lines in a struct
@@ -129,6 +124,29 @@ int patt_lens[] PROGMEM = {
 
 #endif
 
+/*
+#if 0
+patt_line_t patt_lines_default[] PROGMEM = {
+    //    G     R     B    fade ledn
+    { { 0x00, 0x11, 0x00 }, 100, 1, 'c' }, // 0  red A
+    { { 0x00, 0x11, 0x00 }, 100, 2, 'c' }, // 1  red B
+    { { 0x00, 0x00, 0x00 }, 100, 0, 'c' }, // 2  off both
+    { { 0x11, 0x00, 0x00 }, 100, 1, 'c' }, // 3  grn A
+    { { 0x11, 0x00, 0x00 }, 100, 2, 'c' }, // 4  grn B
+    { { 0x00, 0x00, 0x00 }, 100, 0, 'c' }, // 5  off both
+    { { 0x00, 0x00, 0x11 }, 100, 1, 'c' }, // 6  blu A
+    { { 0x00, 0x00, 0x11 }, 100, 2, 'c' }, // 7  blu B
+    { { 0x00, 0x00, 0x00 }, 100, 0, 'c' }, // 8  off both
+    { { 0x10, 0x10, 0x10 }, 100, 0, 'c' }, // 9  half-bright, both LEDs
+    { { 0x00, 0x00, 0x00 }, 100, 0, 'c' }, // 10 off both
+    { { 0x11, 0x11, 0x11 },  50, 1, 'c' }, // 11 white A
+    { { 0x00, 0x00, 0x00 },  50, 1, 'c' }, // 12 off A
+    { { 0x7f, 0x7f, 0x7f },  50, 2, 'c' }, // 13 white B
+    { { 0x00, 0x00, 0x00 }, 100, 2, 'c' }, // 14 off B
+    { { 0x00, 0x00, 0x00 }, 100, 0, 'c' }, // 15 off everyone
+};
+#endif
+*/
 /*
 // this does not work
 struct pattern_t {

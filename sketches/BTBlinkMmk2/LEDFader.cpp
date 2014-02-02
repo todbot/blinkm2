@@ -17,7 +17,7 @@ void pp(char *fmt, ... )
 }
 
 //
-void LEDFader::setCurr(rgb_t* newcolor, int ledn)
+void LEDFader::setCurr(rgb_t* newcolor, uint16_t ledn)
 { 
     uint8_t i=0;
 
@@ -39,7 +39,7 @@ void LEDFader::setCurr(rgb_t* newcolor, int ledn)
 }
 
 //
-void LEDFader::setDestN(rgb_t newc, int steps, int ledn)
+void LEDFader::setDestN(rgb_t newc, int steps, uint8_t ledn)
 { 
     rgbfader_t* f = &faders[ledn];
     f->stepcnt = steps + 1;
@@ -52,25 +52,33 @@ void LEDFader::setDestN(rgb_t newc, int steps, int ledn)
     f->m100x.r = 100* ((int)newc.r - old.r) / steps;
     f->m100x.g = 100* ((int)newc.g - old.g) / steps;
     f->m100x.b = 100* ((int)newc.b - old.b) / steps;
+    /*
     if( ledn==0 ) {
-        /*
         p("ledn: %d dest: %d,%d,%d  old: %d,%d,%d  m100x:%d,%d,%d\n", 
           ledn, f->dest.r, f->dest.g, f->dest.b, 
           old.r, old.g, old.b,
           f->m100x.r, f->m100x.g, f->m100x.b);
-        */
     }
+    */
 }
 
 //
-void LEDFader::setDest(rgb_t newcolor, int steps, int ledn)
+void LEDFader::setDest(rgb_t newcolor, int steps, uint16_t ledn)
 {
-    if (ledn > 0) {
-        setDestN( newcolor, steps, ledn-1);
-    } else {
+    pp("setDest: colr:%d,%d,%d\n", newcolor.r,newcolor.g,newcolor.b);
+    if( ledn==0 ) { 
         for (uint8_t i=0; i < nLEDs; i++) {
             setDestN( newcolor, steps, i);
         }  
+    } 
+    else { 
+        uint8_t bitpos = 0;
+        do { 
+            uint8_t bit = (ledn>>bitpos) & 0x1;
+            //pp("ledn:%4x bitpos:%x bit:%x\n", ledn,bitpos,bit );
+            if( bit )  
+                setDestN( newcolor, steps, bitpos );
+        } while( ++bitpos != nLEDs );
     }
 }
 
@@ -102,20 +110,24 @@ void LEDFader::update(void)
 
         f->stepcnt--;
         if( f->stepcnt ) {
+            /*
             if( i==0 ) {
                 pp("%d:st:%3d m100x:%d dest:%d \t led: %d\n",
                    i, f->stepcnt, f->m100x.r, f->dest.r, leds[i].r);
             }
+            */
             leds[i].r = getNewVal(f->stepcnt, f->m100x.r, f->dest.r, leds[i].r);
             leds[i].g = getNewVal(f->stepcnt, f->m100x.g, f->dest.g, leds[i].g);
             leds[i].b = getNewVal(f->stepcnt, f->m100x.b, f->dest.b, leds[i].b);
 
         }
         else { 
+            /*
             pp("!!BOP!!");
             leds[i].r = f->dest.r;
             leds[i].g = f->dest.g;
             leds[i].b = f->dest.b;
+            */
         }
     }
 }
