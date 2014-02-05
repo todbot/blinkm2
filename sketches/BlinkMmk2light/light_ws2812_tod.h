@@ -24,8 +24,10 @@ void ws2812_sendarray_mask(uint8_t *ledarray,uint16_t length, uint8_t mask);
 
 //#define ws2812_port PORTB						// Data port register
 //#define ws2812_pin 7							// Number of the data out pin
+//#define ws2812_port PORTA						// Data port register
+//#define ws2812_pin 7							// Number of the data out pin
 #define ws2812_port PORTA						// Data port register
-#define ws2812_pin 7							// Number of the data out pin
+#define ws2812_pin 0							// Number of the data out pin
 
 ///////////////////////////////////////////////////////////////////////
 // User defined area: Define CPU clock speed
