@@ -58,14 +58,14 @@ patt_line_t patt_lines_default[] PROGMEM = {
 };
 */
 
-patt_line_t patt_lines_rgb0[] PROGMEM = {
-    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0 }}, // 0  red all
-    {{ 'c', { 0x00, 0x33, 0x00 }, 100, 0 }}, // 0  red all
-    {{ 'c', { 0x00, 0x00, 0x33 }, 100, 0 }}, // 1  grn all
-    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0 }}, // 1  grn all
+patt_line_t patt_lines_rgb[] PROGMEM = {
+    {{ 'c', { 0x00, 0x33, 0x00 }, 100, 0 }}, // red
+    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0 }}, // grn
+    {{ 'c', { 0x00, 0x00, 0x33 }, 100, 0 }}, // blu
+    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0 }}, // off
 };
 
-patt_line_t patt_lines_rgb[] PROGMEM = {
+patt_line_t patt_lines_rgb0[] PROGMEM = {
     {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0b1111111100000010 }}, // 0  red all
     {{ 'n', { 0x00, 0x33, 0x00 }, 100, 0b0000000010101010 }}, // 1  grn all
     {{ 'n', { 0x00, 0x00, 0x33 }, 100, 0b1111111100001100 }}, // 2  blu all
@@ -87,18 +87,19 @@ patt_line_t patt_lines_stoplight[] PROGMEM = {
 */
 
 patt_line_t* patterns[] PROGMEM = {
-    (patt_line_t*) &patt_lines_default,
     (patt_line_t*) &patt_lines_rgb,
+    (patt_line_t*) &patt_lines_rgb0,
+    (patt_line_t*) &patt_lines_default,
     //(patt_line_t*) &patt_lines_blink_white,
     //(patt_line_t*) &patt_lines_stoplight,
 };
 
 // this is so lame, but can't create a flexible array of patt_lines in a struct
-int patt_lens[] PROGMEM = {
+uint8_t patt_lens[] PROGMEM = {
+    3,
+    3,
+    3,
     16,
-    3,
-    2,
-    3,
 };
 
 

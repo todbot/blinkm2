@@ -51,6 +51,7 @@ typedef union {
     uint8_t args[8];
 } patt_line_t;
 
+/*
 typedef struct { 
     uint8_t cmd;
     union { 
@@ -60,6 +61,7 @@ typedef struct {
     };
     uint8_t args[7];
 } patt_line2_t;
+*/
 
 //uint8_t playstart = 0; // start play position
 //uint8_t playend   = patt_max; // end play position
@@ -67,7 +69,6 @@ typedef struct {
 //uint8_t playcount = 0; // number of times to play loop, or 0=infinite
 struct patt_info_t { 
     uint8_t id;
-    uint8_t reps;
     uint8_t start;
     uint8_t end;
     uint8_t count;

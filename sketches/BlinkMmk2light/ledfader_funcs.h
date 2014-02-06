@@ -8,8 +8,8 @@
 
 // requirements before inclusion: 
 // -- nLEDs  - number of RGB LEDs
-// -- leds[] - array of rgb_t or CRGB structs
-
+// -- leds[] - array of rgb_t or CRGB structs, of length nLEDs
+// -- faders[] - array of rgbfader_t structs, of length nLEDs
 
 // public functions
 void ledfader_setCurr(rgb_t color, uint16_t ledn);
@@ -36,26 +36,28 @@ void ledfader_setCurr(rgb_t newcolor, uint16_t ledn)
         f->dest.r = newcolor.r;
         f->dest.g = newcolor.g;
         f->dest.b = newcolor.b;
-
+        
         leds[i].r = newcolor.r;
         leds[i].g = newcolor.g;
         leds[i].b = newcolor.b;
     }
 }
 
+//inline
+__attribute__((always_inline)) inline 
 void ledfader_setDestN(rgb_t newc, int steps, uint8_t ledn)
 { 
     rgbfader_t* f = &faders[ledn];
-    f->stepcnt = steps + 1;
+    faders[ledn].stepcnt = steps + 1;
     f->dest.r = newc.r;
     f->dest.g = newc.g; 
     f->dest.b = newc.b;
 
     CRGB old = leds[ledn];
 
-    f->m100x.r = 100* ((int)newc.r - old.r) / steps;
-    f->m100x.g = 100* ((int)newc.g - old.g) / steps;
-    f->m100x.b = 100* ((int)newc.b - old.b) / steps;
+    f->m100x.r = 100* ((int16_t)newc.r - old.r) / steps;
+    f->m100x.g = 100* ((int16_t)newc.g - old.g) / steps;
+    f->m100x.b = 100* ((int16_t)newc.b - old.b) / steps;
 }
 
 //
@@ -76,23 +78,59 @@ void ledfader_setDest(rgb_t newcolor, int steps, uint16_t ledn)
     }
 }
 
-__attribute__((always_inline)) inline 
+/*
+//__attribute__((always_inline)) inline 
 uint8_t ledfader_getNewVal( uint16_t stepcnt, int16_t m100x, 
                             uint8_t dest, uint8_t curr) 
 {
-    int dest100x = 100* dest;    // dest color
-    // new color from slope, with rounding up (+50)
-    int tmpc = (100* curr) + m100x + 0 ; 
-    //err = -(tmpc - (dest100x - (m100x*(stepcnt-i))));
-    int err = -(tmpc - (dest100x - (m100x*(stepcnt))));
-    
-    if((m100x > 0 && err>m100x) || (m100x < 0 && err<m100x) ) {
-        tmpc += err;        //tmpc += m100x;
+    int16_t dest100x = 100* dest;    // dest color at 100x
+    // new color from slope, working backwards from dest
+    int16_t tmpc = dest100x - (m100x*(stepcnt));
+    return ((tmpc + 50) / 100); // de-scale, with rounding
+}
+*/
+
+//
+void ledfader_update(void)
+{
+    for( uint8_t i=0; i<nLEDs; i++ ) {
+        rgbfader_t* f = &faders[i];
+        if( !f->stepcnt ) {
+            continue;
+        }
+
+        f->stepcnt--;
+        if( f->stepcnt ) {
+            tmpc = (100* (int16_t)f->dest.r) - (f->m100x.r * (f->stepcnt));
+            tmpc = (tmpc + 50) / 100;
+            leds[i].r = tmpc;
+
+            tmpc = (100* (int16_t)f->dest.g) - (f->m100x.g * (f->stepcnt));
+            tmpc = (tmpc + 50) / 100;
+            leds[i].g = tmpc;
+
+            tmpc = (100* (int16_t)f->dest.b) - (f->m100x.b * (f->stepcnt));
+            tmpc = (tmpc + 50) / 100;
+            leds[i].b = tmpc;
+        }
+        else { 
+            leds[i].r = f->dest.r;
+            leds[i].g = f->dest.g;
+            leds[i].b = f->dest.b;
+        }
+#if 0
+        if( i==0 ) {
+            dbg_tx_strP(PSTR("up: "));
+            dbg_tx_hex(f->stepcnt);
+            dbg_tx_putc(', cur:');
+            dbg_tx_hex(leds[i].r);
+            dbg_tx_putc('\n');
+        }
+#endif
     }
-            
-    return ((tmpc + 50) / 100); // de-scale
 }
 
+/*
 //
 void ledfader_update(void)
 {
@@ -115,14 +153,17 @@ void ledfader_update(void)
         }
 #if 1
             if( i==0 ) {
-                dbg_tx_strP(PSTR("up:"));
+                dbg_tx_strP(PSTR("up: "));
                 dbg_tx_hex(f->stepcnt);
-                dbg_tx_putc(',');
+                dbg_tx_putc(', cur:');
                 dbg_tx_hex(leds[i].r);
                 dbg_tx_putc('\n');
             }
 #endif
     }
 }
+*/
+
+
 
 #endif

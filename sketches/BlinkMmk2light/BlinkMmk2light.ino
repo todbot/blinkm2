@@ -32,40 +32,18 @@
 extern "C" {
   #include <inttypes.h>
   #include "usiTwiSlave.h"
-}
+  #include "light_ws2812.h"
 
-
-#define DBG_TX
-#ifdef DBG_TX
-extern "C" { 
-#include "dbg_putchar.h"
+  #include "debugtools.h"
 }
-void dbg_tx_str(const char* s) {
-    while( *s ) dbg_putchar( *s++);
-}
-void dbg_tx_strP(const char* s) {
-    char c;
-    while ((c = pgm_read_byte(s++)))
-        dbg_putchar(c);
-}
-void dbg_tx_hex( int d ) { 
-    static char str[5];
-    dbg_tx_str( itoa(d, str, 16) );
-}
-#define dbg_tx_putc(x) dbg_putchar(x)
-#else
-#define dbg_tx_init()
-#define dbg_tx_putchar(x)
-#define dbg_tx_str(x)
-#define dbg_tx_hex(x)
-#endif
 
 
 // How many leds in your strip?
-//const int NUM_LEDS = 4;
-const int nLEDs = 4;
+///const int nLEDs = 4;
+const int nLEDs = 16;
+const int wsnLEDs = 3*nLEDs;
 
-#include "FastLED.h"
+//#include "FastLED.h"
 
 #include "blinkm_types.h"
 
@@ -73,39 +51,25 @@ const int nLEDs = 4;
 #define BLINKM_PROTOCOL_VERSION_MAJOR 'c'
 #define BLINKM_PROTOCOL_VERSION_MINOR 'f'
 #define I2C_SLAVE_ADDR 0x09
-
+//const int I2C_SLAVE_ADDR  = 0x09;     // default BlinkM addr
 
 const int DATA_PIN = 0;   // maxm A0
 //const int DATA_PIN = 7; // blinkmmk2
 
-
-//const int I2C_SLAVE_ADDR  = 0x09;     // default BlinkM addr
-
-// BlinkM MaxM pins 
-const int redPin = 8;   // PB2 OC0A
-const int grnPin = 7;   // PA7 OC0B
-const int bluPin = 5;   // PA5 OC1B
-const int sdaPin = 6;   // PA6 
-const int sclPin = 9;   // PA4
-const int in0Pin = A0;  // PA0
-const int in1Pin = A1;  // PA1
-const int in2Pin = A2;  // PA2
-const int in3Pin = A3;  // PA3
-
+const uint8_t patt_max=16;
 
 const  uint8_t  led_update_millis = 10;  // tick msec
 static uint32_t led_update_next;
 static uint32_t pattern_update_next;
-
-const uint8_t patt_max=16;
 
 // Define the array of leds
 CRGB leds[nLEDs];
 rgb_t ctmp;
 uint16_t ttmp;   // temp time holder
 uint8_t ntmp;    // temp ledn holder
+int16_t tmpc;
 
-uint8_t playpos   = 0; // current play position
+uint8_t playpos = 0; // current play position
 uint8_t playing = 1; // playing values: 0=off, 1=normal, 2==playing from powerup
 
 rgbfader_t faders[nLEDs];
@@ -152,19 +116,45 @@ void setup()
     ctmp.r = ctmp.g = ctmp.b = 0;
     ledfader_setCurr(ctmp, 0);
 
-    FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, nLEDs);
-    FastLED.show();
-    
-    delay(500);
+    //FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, nLEDs);
+    //FastLED.show();
+
+    pinMode( ws2812_pin, OUTPUT );
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    //ws2812_setleds( (uint8_t*)leds, nLEDs );
 
 #if 1
-    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000020;
+    delay(500);
+    for( uint8_t i=0; i< nLEDs; i++ ) {
+        leds[i].r=0x00; leds[i].g=0x00; leds[i].b = 0x20; } // blu
+
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    delay(700);
+    for( uint8_t i=0; i< nLEDs; i++ ) {
+        leds[i].r=0x00; leds[i].g=0x20; leds[i].b = 0x00; }  // grn
+
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    delay(700);
+    for( uint8_t i=0; i< nLEDs; i++ ) {
+        leds[i].r=0x20; leds[i].g=0x00; leds[i].b = 0x00; }  // red
+
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    delay(700);
+    for( uint8_t i=0; i< nLEDs; i++ ) {
+        leds[i].r=0x00; leds[i].g=0x00; leds[i].b = 0x00; }
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    delay(700);
+#endif
+
+#if 0
+    delay(500);
+    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000020;  // blue 
     FastLED.show();
     delay(500);
-    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x002000;
+    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x002000;  // green
     FastLED.show();
     delay(500);
-    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000000;
+    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000000;  // off
     FastLED.show();
     delay(500);
 #endif
@@ -183,22 +173,27 @@ void loop()
     handleI2C();
 }
 
-inline void startPlaying(void)
+void startPlaying(void)
 {
+    if( patt_info.id  > 0 && patt_info.end == 0 ) {  // fetch default len
+        patt_info.end = pgm_read_byte( &(patt_lens[ patt_info.id-1 ]) );
+    }
+        
     patt_info.start = 0;  // FIXME: should be args
-    patt_info.end   = 4;
+    //patt_info.end   = 4;
     //patt_info.start = 0;
     //patt_info.end = patt_max;
     patt_info.count = 0;
     
     playpos = patt_info.start;
-    pattern_update_next = 0; 
+    pattern_update_next = millis(); 
   
     playing = 1;
 }
 
 
 //
+inline
 void handleInputs(void)
 {
     inputs[0] = analogRead( 0 );
@@ -211,6 +206,7 @@ void handleInputs(void)
 
 
 //
+inline
 void handlePattLine(void)
 {
     rgb_t    ctmp = pattline.color;
@@ -260,6 +256,10 @@ void handlePattLine(void)
     default:
         break;
     }
+
+    dbg_tx_strP(PSTR("freeRam:"));
+    dbg_tx_hex( freeRam() );
+    dbg_tx_str("\n");
 }
 
 //__attribute__((always_inline)) inline void readI2Cvals(uint8_t cnt)
@@ -358,9 +358,12 @@ void handleI2C(void)
 //
 inline void displayLEDs()
 {
-    FastLED.show();
+    //FastLED.show();
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
 }
 
+//
+//
 //
 void updateLEDs(void)
 {
@@ -383,7 +386,7 @@ void updateLEDs(void)
             } 
             else {                  // flash
                 patt_line_t* pp;
-                memcpy_P(&pp, &patterns[ patt_info.id ], sizeof(patt_line_t*));
+                memcpy_P(&pp, &patterns[patt_info.id-1], sizeof(patt_line_t*));
                 memcpy_P(&pattline, &pp[playpos],sizeof(patt_line_t));
             }
 
@@ -431,6 +434,8 @@ uint8_t randRange(uint8_t prev, uint8_t range)
     return (uint8_t)n;
 }
 
+/*
+// from: http://rgb-123.com/ws2812-color-output/
 uint8_t GammaE[] PROGMEM = { 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2,
@@ -453,3 +458,4 @@ static inline uint8_t gamma( uint8_t n )
 {
     return pgm_read_byte( &GammaE[n] );
 }
+*/
