@@ -35,7 +35,7 @@ extern "C" {
   #include "usiTwiSlave.h"
   #include "light_ws2812.h"
 
-  #include "debugtools.h"
+//  #include "debugtools.h"
 }
 
 #include "blinkm_types.h"
@@ -47,6 +47,7 @@ extern "C" {
 const int nLEDs = 16;
 const int wsnLEDs = 3*nLEDs;
 
+const uint8_t patt_fudge_percent = 50;
 
 #define BLINKM_PROTOCOL_VERSION_MAJOR 'c'
 #define BLINKM_PROTOCOL_VERSION_MINOR 'f'
@@ -78,6 +79,10 @@ patt_info_t patt_info;
 patt_line_t pattline;  // temp pattern holder
 
 uint8_t inputs[4];
+
+
+#include "debugtools.h"
+
 
 //-----------------------------
 
@@ -122,50 +127,20 @@ void setup()
     ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
     //ws2812_setleds( (uint8_t*)leds, nLEDs );
 
-#if 1
-    delay(500);
-    for( uint8_t i=0; i< nLEDs; i++ ) {
-        leds[i].r=0x00; leds[i].g=0x00; leds[i].b = 0x20; } // blu
-
-    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
-    delay(700);
-    for( uint8_t i=0; i< nLEDs; i++ ) {
-        leds[i].r=0x00; leds[i].g=0x20; leds[i].b = 0x00; }  // grn
-
-    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
-    delay(700);
-    for( uint8_t i=0; i< nLEDs; i++ ) {
-        leds[i].r=0x20; leds[i].g=0x00; leds[i].b = 0x00; }  // red
-
-    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
-    delay(700);
-    for( uint8_t i=0; i< nLEDs; i++ ) {
-        leds[i].r=0x00; leds[i].g=0x00; leds[i].b = 0x00; }
-    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
-    delay(700);
-#endif
-
-#if 0
-    delay(500);
-    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000020;  // blue 
-    FastLED.show();
-    delay(500);
-    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x002000;  // green
-    FastLED.show();
-    delay(500);
-    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000000;  // off
-    FastLED.show();
-    delay(500);
-#endif
+    debug_flash();
 
     led_update_next = millis();
 
-    patt_info.id    = 1;
+    patt_info.id    = 4;
+    patt_info.start = 0;
+    patt_info.count = 0;
+    patt_info.end   = 0;
+
     startPlaying();
 }
 
 //
-void loop() 
+void loop()  
 { 
     updateLEDs();
     //handleInputs();
@@ -183,11 +158,8 @@ void startPlaying(void)
         }
     }
         
-    patt_info.count = 0;
-    
     playpos = patt_info.start;
     pattern_update_next = millis(); 
-  
     playing = 1;
 }
 
@@ -212,6 +184,10 @@ void handlePattLine(void)
     int      ttmp = pattline.dmillis;
     uint16_t ntmp = pattline.ledn;
 
+    ttmp -= (ttmp * patt_fudge_percent / 100); 
+
+    if( ttmp < 1 ) ttmp = 1;
+
     if( pattline.cmd==0 && ttmp == 0 ) {
         return;
     }
@@ -230,7 +206,7 @@ void handlePattLine(void)
         break;
     case('h'):  // fade to hsv color
         hsvToRgb(&ctmp);
-        ledfader_setDest( ctmp, ttmp, ntmp );  // FIXME
+        ledfader_setDest( ctmp, ttmp, ntmp ); 
         break;
     case('H'):
         ctmp.h = randRange(ctmp.h, leds[0].h );
@@ -399,11 +375,12 @@ void updateLEDs(void)
             }
 
             pattern_update_next += pattline.dmillis*10;
+            pattern_update_next += (ttmp * patt_fudge_percent / 100);
 
             handlePattLine();
     
             playpos++;
-            if( playpos > patt_info.end ) {
+            if( playpos == patt_info.end ) {
                 playpos = patt_info.start;
                 patt_info.count--;
                 if( patt_info.count == 0 ) {
@@ -416,7 +393,6 @@ void updateLEDs(void)
             //p("patt:%d cnt:%d start:%d stop:%d pos:%d ttmp:%d\n", 
             //  patt_info.id, patt_info.count, patt_info.start, patt_info.end, 
             //  playpos, pattline.dmillis*10);
-        
         }
 
     } // playing

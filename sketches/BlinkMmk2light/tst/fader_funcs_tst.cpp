@@ -19,6 +19,14 @@ int main()
 {
     printf("fader_funcs_tst\n");
 
+    rgb_t ctmp;
+    for( int i=0; i< 255; i++ ) {
+        ctmp.h = i; ctmp.s=255; ctmp.v = 255;
+        hsvToRgb( &ctmp );
+        printf("%d: %d,%d,%d\n", i, ctmp.r, ctmp.g, ctmp.b );
+    }
+
+#if 0
     rgb_t ctmp; // = { 255,255,255 };
     //int ttmp = 15;
     //int ln = 5;
@@ -32,7 +40,7 @@ int main()
     for( int i=0; i< steps+1; i++) {
         ledfader_update();
     }
-
+#endif
 
     /*
     ctmp.r=25; ctmp.g=250; ctmp.b=55;

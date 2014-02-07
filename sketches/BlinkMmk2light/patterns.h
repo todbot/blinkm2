@@ -15,6 +15,48 @@ patt_info_t ee_patt_info  EEMEM;
 
 patt_line_t ee_patt_lines[patt_max] EEMEM;
 
+
+patt_line_t patt_lines_rgb[] PROGMEM = {
+    //          G     R     B
+    {{ 'c', { 0x00, 0x33, 0x00 }, 100, 0 }}, // red
+    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0 }}, // grn
+    {{ 'c', { 0x00, 0x00, 0x33 }, 100, 0 }}, // blu
+    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0 }}, // off
+};
+
+patt_line_t patt_lines_rgb0[] PROGMEM = {
+    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0b1111111100000010 }}, // 0  red all
+    {{ 'n', { 0x00, 0x33, 0x00 }, 100, 0b0000000010101010 }}, // 1  grn all
+    {{ 'n', { 0x00, 0x00, 0x33 }, 100, 0b1111111100001100 }}, // 2  blu all
+    {{ 'n', { 0x33, 0x33, 0x33 }, 100, 0b0000000010101111 }}, // 2  wht all
+    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0b1111111111111111 }}, // 1  off all
+};
+
+patt_line_t patt_lines_hsv[] PROGMEM = {
+    {{ 'c', { 0x00, 0xff, 0xff }, 100, 0 }}, // 
+    {{ 'c', { 0x33, 0xff, 0xff }, 100, 0 }}, // 
+    {{ 'c', { 0x66, 0xff, 0xff }, 100, 0 }}, // 
+    {{ 'c', { 0x99, 0xff, 0xff }, 100, 0 }}, // 
+};
+
+patt_line_t patt_lines_huecycle[] PROGMEM = { 
+    //          H    S    V
+    {{ 'h', { 0xff,0x00,0x33 }, 200, 0 }},  // white
+    {{ 'h', { 0x00,0xff,0xff }, 100, 0 }},  // red
+    {{ 'h', { 0x2a,0xff,0xff }, 100, 0 }},  // yellow 
+    {{ 'h', { 0x54,0xff,0xff }, 100, 0 }},  // green
+    {{ 'h', { 0x7e,0xff,0xff }, 100, 0 }},  // cyan
+    {{ 'h', { 0xa8,0xff,0xff }, 100, 0 }},  // blue
+    {{ 'h', { 0xd2,0xff,0xff }, 100, 0 }},  // magenta
+    {{ 'h', { 0xff,0xff,0xff }, 100, 0 }},  // red
+};
+
+patt_line_t patt_lines_blink_white[] PROGMEM = {
+    {{ 'c', { 0x33, 0x33, 0x33 },  50, 0 }}, // 0  white all
+    {{ 'c', { 0x00, 0x00, 0x00 },  50, 0 }}, // 1  off all
+};
+
+
 patt_line_t patt_lines_default[] PROGMEM  = {
     // cmd      R     G     B    fade ledn
     {{ 'c', { 0x11, 0x00, 0x00 }, 50, 0 }}, // 0  red A
@@ -37,6 +79,39 @@ patt_line_t patt_lines_default[] PROGMEM  = {
 };
 
 /*
+patt_line_t patt_lines_stoplight[] PROGMEM = {
+    { { 0x00, 0x33, 0x00 },  50, 0, 'c' }, // 0  red
+    { { 0xdd, 0x11, 0x00 },  50, 0, 'c' }, // 1  yellow
+    { { 0x00, 0x33, 0x11 },  50, 0, 'c' }, // 1  greenblue
+};
+*/
+
+patt_line_t* patterns[] PROGMEM = {
+    (patt_line_t*) &patt_lines_rgb,       // 1
+    (patt_line_t*) &patt_lines_rgb0,      // 2
+    (patt_line_t*) &patt_lines_hsv,       // 3
+    (patt_line_t*) &patt_lines_huecycle,  // 4
+    (patt_line_t*) &patt_lines_blink_white,  // 5
+    (patt_line_t*) &patt_lines_default,   // 6
+   
+    //(patt_line_t*) &patt_lines_blink_white,
+    //(patt_line_t*) &patt_lines_stoplight,
+};
+
+// this is so lame, but can't create a flexible array of patt_lines in a struct
+uint8_t patt_lens[] PROGMEM = {
+    4,
+    5,
+    4,
+    8,
+    2,
+    patt_max,
+};
+
+
+#endif
+
+/*
 patt_line_t patt_lines_default[] PROGMEM = {
     //    G     R     B    fade ledn
     { { 0x00, 0x11, 0x00 },  100, 0 }, // 0  red A
@@ -57,53 +132,6 @@ patt_line_t patt_lines_default[] PROGMEM = {
     { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
 };
 */
-
-patt_line_t patt_lines_rgb[] PROGMEM = {
-    {{ 'c', { 0x00, 0x33, 0x00 }, 100, 0 }}, // red
-    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0 }}, // grn
-    {{ 'c', { 0x00, 0x00, 0x33 }, 100, 0 }}, // blu
-    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0 }}, // off
-};
-
-patt_line_t patt_lines_rgb0[] PROGMEM = {
-    {{ 'c', { 0x33, 0x00, 0x00 }, 100, 0b1111111100000010 }}, // 0  red all
-    {{ 'n', { 0x00, 0x33, 0x00 }, 100, 0b0000000010101010 }}, // 1  grn all
-    {{ 'n', { 0x00, 0x00, 0x33 }, 100, 0b1111111100001100 }}, // 2  blu all
-    {{ 'n', { 0x33, 0x33, 0x33 }, 100, 0b0000000010101111 }}, // 2  wht all
-    {{ 'c', { 0x00, 0x00, 0x00 }, 100, 0b1111111111111111 }}, // 1  off all
-};
-
-/*
-patt_line_t patt_lines_blink_white[] PROGMEM = {
-    { { 0x33, 0x33, 0x33 },  50, 0, 'c' }, // 0  white all
-    { { 0x00, 0x00, 0x00 },  50, 0, 'c' }, // 1  off all
-};
-
-patt_line_t patt_lines_stoplight[] PROGMEM = {
-    { { 0x00, 0x33, 0x00 },  50, 0, 'c' }, // 0  red
-    { { 0xdd, 0x11, 0x00 },  50, 0, 'c' }, // 1  yellow
-    { { 0x00, 0x33, 0x11 },  50, 0, 'c' }, // 1  greenblue
-};
-*/
-
-patt_line_t* patterns[] PROGMEM = {
-    (patt_line_t*) &patt_lines_rgb,
-    (patt_line_t*) &patt_lines_rgb0,
-    (patt_line_t*) &patt_lines_default,
-    //(patt_line_t*) &patt_lines_blink_white,
-    //(patt_line_t*) &patt_lines_stoplight,
-};
-
-// this is so lame, but can't create a flexible array of patt_lines in a struct
-uint8_t patt_lens[] PROGMEM = {
-    3,
-    3,
-    3,
-    16,
-};
-
-
-#endif
 
 /*
 #if 0

@@ -52,4 +52,48 @@ void dbg_tx_hex( int d ) {
 #define dbg_tx_hex(x)
 #endif
 
+
+//
+void debug_flash(void)
+{
+#define delayt 300
+
+#if 1
+    delay(delayt);
+    for( uint8_t i=0; i< nLEDs; i++ ) {
+        leds[i].r=0x00; leds[i].g=0x00; leds[i].b = 0x20; } // blu
+
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    delay(delayt);
+    for( uint8_t i=0; i< nLEDs; i++ ) {
+        leds[i].r=0x00; leds[i].g=0x20; leds[i].b = 0x00; }  // grn
+
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    delay(delayt);
+    for( uint8_t i=0; i< nLEDs; i++ ) {
+        leds[i].r=0x20; leds[i].g=0x00; leds[i].b = 0x00; }  // red
+
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    delay(delayt);
+    for( uint8_t i=0; i< nLEDs; i++ ) {
+        leds[i].r=0x00; leds[i].g=0x00; leds[i].b = 0x00; }
+    ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
+    delay(delayt);
+#endif
+
+#if 0
+    delay(delayt);
+    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000020;  // blue 
+    FastLED.show();
+    delay(delayt);
+    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x002000;  // green
+    FastLED.show();
+    delay(delayt);
+    for( int i=0; i< nLEDs; i++ )  leds[i] = 0x000000;  // off
+    FastLED.show();
+    delay(delayt);
+#endif
+}
+
+
 #endif
