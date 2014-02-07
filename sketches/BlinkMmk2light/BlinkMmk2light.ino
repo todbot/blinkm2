@@ -29,23 +29,23 @@
 #include <avr/eeprom.h>  // FOR EEMEM
 #include <avr/delay.h>
 
+#include <stdlib.h>
+
 extern "C" {
-  #include <inttypes.h>
   #include "usiTwiSlave.h"
   #include "light_ws2812.h"
 
   #include "debugtools.h"
 }
 
+#include "blinkm_types.h"
+//#include "FastLED.h"
+
 
 // How many leds in your strip?
 ///const int nLEDs = 4;
 const int nLEDs = 16;
 const int wsnLEDs = 3*nLEDs;
-
-//#include "FastLED.h"
-
-#include "blinkm_types.h"
 
 
 #define BLINKM_PROTOCOL_VERSION_MAJOR 'c'
@@ -78,7 +78,6 @@ patt_info_t patt_info;
 patt_line_t pattline;  // temp pattern holder
 
 uint8_t inputs[4];
-
 
 //-----------------------------
 
@@ -173,16 +172,17 @@ void loop()
     handleI2C();
 }
 
+// must fill out patt_info struct before calling this func
 void startPlaying(void)
 {
-    if( patt_info.id  > 0 && patt_info.end == 0 ) {  // fetch default len
-        patt_info.end = pgm_read_byte( &(patt_lens[ patt_info.id-1 ]) );
+    if( patt_info.end == 0 ) {  // fetch default len
+        if( patt_info.id == 0 ) { 
+            patt_info.end = patt_max;
+        } else { 
+            patt_info.end = pgm_read_byte( &(patt_lens[ patt_info.id-1 ]) );
+        }
     }
         
-    patt_info.start = 0;  // FIXME: should be args
-    //patt_info.end   = 4;
-    //patt_info.start = 0;
-    //patt_info.end = patt_max;
     patt_info.count = 0;
     
     playpos = patt_info.start;
@@ -203,7 +203,6 @@ void handleInputs(void)
 }
 
 #if 1
-
 
 //
 inline
@@ -229,12 +228,15 @@ void handlePattLine(void)
         ctmp.b = randRange(ctmp.b, leds[0].b );
         ledfader_setDest( ctmp, ttmp, ntmp );
         break;
-    case('h'):     // fade to hsv color
-        //CRGB c = CHSV( ctmp.raw[0], ctmp.raw[1], ctmp.raw[2] );
-        //ctmp.r = c.r; ctmp.g = c.g; ctmp.b = c.b;
+    case('h'):  // fade to hsv color
+        hsvToRgb(&ctmp);
         ledfader_setDest( ctmp, ttmp, ntmp );  // FIXME
         break;
-    case('H'):  // FIXME
+    case('H'):
+        ctmp.h = randRange(ctmp.h, leds[0].h );
+        ctmp.s = randRange(ctmp.s, leds[0].s );
+        ctmp.v = randRange(ctmp.v, leds[0].v );
+        hsvToRgb(&ctmp);
         ledfader_setDest( ctmp, ttmp, ntmp );
         break;
     case('i'):
@@ -265,9 +267,14 @@ void handlePattLine(void)
 //__attribute__((always_inline)) inline void readI2Cvals(uint8_t cnt)
 void readI2Cvals(uint8_t cnt)
 {
-    for(uint8_t i=0;i<cnt;i++) {
+    for(uint8_t i=0;i<cnt;i++) 
         pattline.args[1+i] = usiTwiReceiveByte();
-    }
+}
+void readI2Ccolor(void)
+{
+    pattline.color.r = usiTwiReceiveByte();
+    pattline.color.g = usiTwiReceiveByte();
+    pattline.color.b = usiTwiReceiveByte();
 }
 
 //
@@ -299,7 +306,8 @@ void handleI2C(void)
     case('C'):         // script cmd: fade to random rgb color
     case('h'):         // script cmd: fade to hsv color
     case('H'):         // script cmd: fade to random hsv color
-        readI2Cvals(3);  // read r,g,b (or h,s,v)
+        //readI2Cvals(3);  // read r,g,b (or h,s,v)
+        readI2Ccolor();   // read r,g,b (or h,s,v)
         
         pattline.dmillis = 30;  // FIXME:
         pattline.ledn = 0;      // FIXME:
@@ -433,6 +441,8 @@ uint8_t randRange(uint8_t prev, uint8_t range)
     n = (n>255) ? 255 : ((n<0) ? 0 : n);
     return (uint8_t)n;
 }
+
+
 
 /*
 // from: http://rgb-123.com/ws2812-color-output/

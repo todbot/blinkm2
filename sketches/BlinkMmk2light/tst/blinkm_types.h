@@ -9,9 +9,18 @@
 // RGB triplet of 8-bit vals for input/output use
 typedef union {
     struct {
-        uint8_t r;
-        uint8_t g;
-        uint8_t b;
+        union { 
+            uint8_t g;
+            uint8_t s;
+        };
+        union { 
+            uint8_t r;
+            uint8_t h;
+        };
+        union { 
+            uint8_t b;
+            uint8_t v;
+        };
     }; 
     uint8_t raw[3];
 } rgb_t;
@@ -24,8 +33,8 @@ typedef rgb_t CRGB;
 // used instead of floating point
 typedef union {
     struct {
-        int16_t r;
         int16_t g;
+        int16_t r;
         int16_t b;
     };
     int16_t raw[3];
