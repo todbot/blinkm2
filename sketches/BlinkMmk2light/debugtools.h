@@ -27,7 +27,6 @@ extern int *__brkval;
   return free_memory;
 }
 
-#define DBG_TX
 #ifdef DBG_TX
 extern "C" { 
 #include "dbg_putchar.h"
@@ -50,6 +49,7 @@ void dbg_tx_hex( int d ) {
 #define dbg_tx_putchar(x)
 #define dbg_tx_str(x)
 #define dbg_tx_hex(x)
+#define dbg_tx_strP(x)
 #endif
 
 

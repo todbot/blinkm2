@@ -13,6 +13,22 @@ rgbfader_t faders[nLEDs];
 
 #include "ledfader_funcs_tst.h"
 
+/*
+patt_line_t foo[]  = {
+    { 'c', { 0x33, 0x44, 0x55 }, 100, 1 },
+};
+patt_line_t patt_lines_blink_white[] = {
+    //{ .cmd='c', { .r=0x33, .g=0x33, .b=0x33 },  50, 0 }, // 0  white all
+    { 'c', {{ 0x00, 0x00, 0x00 }},  50, 0 }, // 1  off all
+};
+*/
+
+rgb_t myc = { 
+    .r = 1, .g = 2, .b =3,
+};
+patt_line_t poop = { 
+    .cmd = 'c', .color = {3,4,5}, .dmillis  = 1, .ledn=0 
+};
 
 
 int main()

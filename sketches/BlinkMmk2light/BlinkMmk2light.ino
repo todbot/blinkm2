@@ -24,6 +24,8 @@
   *
   */
 
+// comment out to remove debugging to a soft serial 
+#define DBG_TX
 
 #include <avr/pgmspace.h>    // for memcpy_P()
 #include <avr/eeprom.h>  // FOR EEMEM
@@ -45,9 +47,10 @@ extern "C" {
 // How many leds in your strip?
 ///const int nLEDs = 4;
 const int nLEDs = 16;
-const int wsnLEDs = 3*nLEDs;
+const int wsnLEDs = 3*nLEDs;  // needed for light_ws2812 funcs
 
-const uint8_t patt_fudge_percent = 50;
+// fudge how fast it gets to target color
+const uint8_t patt_fudge_percent = 50; 
 
 #define BLINKM_PROTOCOL_VERSION_MAJOR 'c'
 #define BLINKM_PROTOCOL_VERSION_MINOR 'f'
@@ -79,10 +82,12 @@ patt_info_t patt_info;
 patt_line_t pattline;  // temp pattern holder
 
 uint8_t inputs[4];
+uint8_t bigIinput = 0xff;
+uint8_t bigIval = 0xff;
+uint8_t bigIjump;
 
 
 #include "debugtools.h"
-
 
 //-----------------------------
 
@@ -143,7 +148,7 @@ void setup()
 void loop()  
 { 
     updateLEDs();
-    //handleInputs();
+    handleInputs();
     handleI2C();
 }
 
@@ -172,6 +177,14 @@ void handleInputs(void)
     inputs[1] = analogRead( 1 );
     inputs[2] = analogRead( 5 );
     inputs[3] = analogRead( 6 );
+
+    // handle 'bigI' logic
+    if( bigIinput != 0xff && bigIval != 0xff ) { // 0xff means not enabled
+        if( inputs[ bigIinput ] > bigIval ) {
+            playpos = bigIjump-1;
+            //script_tick = 255;  // sigh // FIXME: only works if byte
+        }
+    }
 }
 
 #if 1
@@ -192,48 +205,49 @@ void handlePattLine(void)
         return;
     }
 
-    switch( pattline.cmd ) {
-    case('n'): // go to rgb immediately
-        ttmp = 1;  // and fall thru to 'c' case
-    case('c'): // fade to rgb
+    if(      pattline.cmd == 'n' ) {
+        ttmp = 1;  
         ledfader_setDest( ctmp, ttmp, ntmp );
-        break;
-    case('C'):  // random rgb    // FIXME
+    }
+    else if( pattline.cmd == 'c' ) { 
+        ledfader_setDest( ctmp, ttmp, ntmp );
+    }
+    else if( pattline.cmd == 'C' ) { 
         ctmp.r = randRange(ctmp.r, leds[0].r );
         ctmp.g = randRange(ctmp.g, leds[0].g ); ///gamma(random(255));
         ctmp.b = randRange(ctmp.b, leds[0].b );
         ledfader_setDest( ctmp, ttmp, ntmp );
-        break;
-    case('h'):  // fade to hsv color
+    }
+    else if( pattline.cmd == 'h' ) { 
         hsvToRgb(&ctmp);
         ledfader_setDest( ctmp, ttmp, ntmp ); 
-        break;
-    case('H'):
+    }
+    else if( pattline.cmd == 'H' ) { 
         ctmp.h = randRange(ctmp.h, leds[0].h );
         ctmp.s = randRange(ctmp.s, leds[0].s );
         ctmp.v = randRange(ctmp.v, leds[0].v );
         hsvToRgb(&ctmp);
         ledfader_setDest( ctmp, ttmp, ntmp );
-        break;
-    case('i'):
-        ttmp = analogRead( pattline.args[1] );
-        break;
-    case('o'):
+    } 
+    else if( pattline.cmd == 'I' ) { 
+        bigIinput = pattline.args[1]; 
+        bigIval   = pattline.args[2];
+        bigIjump  = pattline.args[3];
+    }
+    else if( pattline.cmd == 'o' ) { 
         playing = 0;
-        break;
-    case('p'):
+    }
+    else if( pattline.cmd == 'p' ) { 
         patt_info.id    = pattline.args[1];
         patt_info.count = 0; //pattline.args[2];
         patt_info.start = 0; //pattline.args[3];
         patt_info.end   = 4; //pattline.args[4];
         startPlaying();
-        break;
-    case('T'):     // random time delay   // FIXME: test this
-        pattline.dmillis = randRange( pattline.dmillis, pattline.args[0] );
-        break;
-    default:
-        break;
     }
+    else if( pattline.cmd == 'T' ) { 
+        playing = 0;
+    }
+  
 
     dbg_tx_strP(PSTR("freeRam:"));
     dbg_tx_hex( freeRam() );
@@ -261,61 +275,67 @@ void handleI2C(void)
     }
     
     pattline.cmd  = usiTwiReceiveByte();
-    
-    switch(pattline.cmd) { 
-        
-    case('o'):         // stop playback
-        //stopPlaying();
+
+    // stop playing 
+    if(      pattline.cmd == 'o' ) {
         playing=0;
-        break;
-    case('T'):         // script cmd: set time adjustment
+    }
+    // ?
+    else if( pattline.cmd == 'T' ) { 
         readI2Cvals(1);
         handlePattLine();
-        break;
-    case('f'):         // script cmd: set fade speed
-    case('t'):         // script cmd: set time adjustment
+    }
+    // fadespeed and timeadj commands
+    else if( pattline.cmd == 'f' ||
+             pattline.cmd == 't' ) {
         readI2Cvals(2);
         handlePattLine();
-        break;
-    case('n'):         // script cmd: set rgb color now
-    case('c'):         // script cmd: fade to rgb color
-    case('C'):         // script cmd: fade to random rgb color
-    case('h'):         // script cmd: fade to hsv color
-    case('H'):         // script cmd: fade to random hsv color
-        //readI2Cvals(3);  // read r,g,b (or h,s,v)
+    } 
+    // color commands
+    else if( pattline.cmd == 'n' ||
+             pattline.cmd == 'c' ||
+             pattline.cmd == 'C' ||
+             pattline.cmd == 'h' ||
+             pattline.cmd == 'H' ) {
         readI2Ccolor();   // read r,g,b (or h,s,v)
         
         pattline.dmillis = 30;  // FIXME:
         pattline.ledn = 0;      // FIXME:
         
         handlePattLine();
-        break;
-    case('p'):         // script cmd: play script
+    }
+    // play light pattern
+    else if( pattline.cmd =='p' ) {
         readI2Cvals(3);
         handlePattLine();
-        break;
-    case('g'):         // get current RGB color
+    }
+    // get current RGB color
+    else if( pattline.cmd == 'g' ) {  
+        // FIXME: choose LED
         usiTwiTransmitByte( leds[0].r );
         usiTwiTransmitByte( leds[0].g );
         usiTwiTransmitByte( leds[0].b );
-        break;
-    case('a'):         // get address 
+    }
+    // get i2c address 
+    else if( pattline.cmd == 'a' ) { 
         // FIXME: does this take too long for I2C?
         usiTwiTransmitByte( 0x09 ); //eeprom_read_byte(&ee_i2c_addr) );
-        break;
-    case('A'):
+    }
+    // write i2c address
+    else if( pattline.cmd == 'A' ) {
         readI2Cvals(4);
         eeprom_write_byte( &ee_i2c_addr, pattline.args[1] ); // write address
         // FIXME:
         usiTwiSlaveInit( pattline.args[1] );                 // re-init
-
         delay(5);    // wait a bit so the USI can reset
-        break;
-    case('Z'):        // return protocol version
+    } 
+    // return protocol version
+    else if( pattline.cmd == 'Z' ) {
         usiTwiTransmitByte( BLINKM_PROTOCOL_VERSION_MAJOR );
         usiTwiTransmitByte( BLINKM_PROTOCOL_VERSION_MINOR );
-        break;
-    case('R'):    // read a script line, outputs 5: dur,cmd,arg1,arg2,arg3
+    } 
+    // read a script line, outputs 5: dur,cmd,arg1,arg2,arg3
+    else if( pattline.cmd == 'R' ) { 
         readI2Cvals(2);   // num, pos
         if( pattline.args[1] == 0 ) { // eeprom script
             eeprom_read_block( &pattline, &ee_patt_lines[pattline.args[2]],
@@ -328,14 +348,15 @@ void handleI2C(void)
         }
         else {                 // flash-based scripts
         }
-        break;
-    case('i'):         // return current input values
+    }
+    // return current input values
+    else if( pattline.cmd == 'i' ) {
         usiTwiTransmitByte( inputs[0] );
         usiTwiTransmitByte( inputs[1] );
         usiTwiTransmitByte( inputs[2] );
         usiTwiTransmitByte( inputs[3] );
-        break;
     }
+
 }
 #endif
 
@@ -445,3 +466,144 @@ static inline uint8_t gamma( uint8_t n )
     return pgm_read_byte( &GammaE[n] );
 }
 */
+
+    /*
+    //if( pattline.cmd == 'n' )
+    switch( pattline.cmd ) {
+    case('n'): // go to rgb immediately
+        ttmp = 1;  // and fall thru to 'c' case
+    case('c'): // fade to rgb
+        ledfader_setDest( ctmp, ttmp, ntmp );
+        break;
+    case('C'):  // random rgb    // FIXME
+        ctmp.r = randRange(ctmp.r, leds[0].r );
+        ctmp.g = randRange(ctmp.g, leds[0].g ); ///gamma(random(255));
+        ctmp.b = randRange(ctmp.b, leds[0].b );
+        ledfader_setDest( ctmp, ttmp, ntmp );
+        break;
+    case('h'):  // fade to hsv color
+        hsvToRgb(&ctmp);
+        ledfader_setDest( ctmp, ttmp, ntmp ); 
+        break;
+    case('H'):
+        ctmp.h = randRange(ctmp.h, leds[0].h );
+        ctmp.s = randRange(ctmp.s, leds[0].s );
+        ctmp.v = randRange(ctmp.v, leds[0].v );
+        hsvToRgb(&ctmp);
+        ledfader_setDest( ctmp, ttmp, ntmp );
+        break;
+    case('i'):
+        ttmp = analogRead( pattline.args[1] );
+        // if input# value is greater than setpoint, jump 
+        if( ttmp > pattline.args[2] ) { 
+            playpos += pattline.args[3] - 1;
+        }
+        break;
+    case('I'):
+        bigIinput = pattline.args[1]; 
+        bigIval   = pattline.args[2];
+        bigIjump  = pattline.args[3];
+        break;
+    case('o'):
+        playing = 0;
+        break;
+    case('p'):
+        patt_info.id    = pattline.args[1];
+        patt_info.count = 0; //pattline.args[2];
+        patt_info.start = 0; //pattline.args[3];
+        patt_info.end   = 4; //pattline.args[4];
+        startPlaying();
+        break;
+    case('~'):          // rotate leds
+        //rgb_t ltmp = faders[start].dest;
+        //for( uint8_t la=0; i< stop-1; i++ ) { // FIXME: make range adjustable
+        //    faders[i].dest = faders[i+1].dest;
+        // }
+        //faders[stop].dest = ltmp;
+        break;
+    case('T'):     // random time delay   // FIXME: test this
+        pattline.dmillis = randRange( pattline.dmillis, pattline.args[0] );
+        break;
+    default:
+        break;
+    }
+    */
+
+
+
+    /*    
+    switch(pattline.cmd) { 
+        
+    case('o'):         // stop playback
+        //stopPlaying();
+        playing=0;
+        break;
+    case('T'):         // script cmd: set time adjustment
+        readI2Cvals(1);
+        handlePattLine();
+        break;
+    case('f'):         // script cmd: set fade speed
+    case('t'):         // script cmd: set time adjustment
+        readI2Cvals(2);
+        handlePattLine();
+        break;
+    case('n'):         // script cmd: set rgb color now
+    case('c'):         // script cmd: fade to rgb color
+    case('C'):         // script cmd: fade to random rgb color
+    case('h'):         // script cmd: fade to hsv color
+    case('H'):         // script cmd: fade to random hsv color
+        //readI2Cvals(3);  // read r,g,b (or h,s,v)
+        readI2Ccolor();   // read r,g,b (or h,s,v)
+        
+        pattline.dmillis = 30;  // FIXME:
+        pattline.ledn = 0;      // FIXME:
+        
+        handlePattLine();
+        break;
+    case('p'):         // script cmd: play script
+        readI2Cvals(3);
+        handlePattLine();
+        break;
+    case('g'):         // get current RGB color
+        usiTwiTransmitByte( leds[0].r );
+        usiTwiTransmitByte( leds[0].g );
+        usiTwiTransmitByte( leds[0].b );
+        break;
+    case('a'):         // get address 
+        // FIXME: does this take too long for I2C?
+        usiTwiTransmitByte( 0x09 ); //eeprom_read_byte(&ee_i2c_addr) );
+        break;
+    case('A'):
+        readI2Cvals(4);
+        eeprom_write_byte( &ee_i2c_addr, pattline.args[1] ); // write address
+        // FIXME:
+        usiTwiSlaveInit( pattline.args[1] );                 // re-init
+
+        delay(5);    // wait a bit so the USI can reset
+        break;
+    case('Z'):        // return protocol version
+        usiTwiTransmitByte( BLINKM_PROTOCOL_VERSION_MAJOR );
+        usiTwiTransmitByte( BLINKM_PROTOCOL_VERSION_MINOR );
+        break;
+    case('R'):    // read a script line, outputs 5: dur,cmd,arg1,arg2,arg3
+        readI2Cvals(2);   // num, pos
+        if( pattline.args[1] == 0 ) { // eeprom script
+            eeprom_read_block( &pattline, &ee_patt_lines[pattline.args[2]],
+                               sizeof(patt_line_t));
+            usiTwiTransmitByte( pattline.args[0] );
+            usiTwiTransmitByte( pattline.args[1] );
+            usiTwiTransmitByte( pattline.args[2] );
+            usiTwiTransmitByte( pattline.args[3] );
+            usiTwiTransmitByte( pattline.args[4] );
+        }
+        else {                 // flash-based scripts
+        }
+        break;
+    case('i'):         // return current input values
+        usiTwiTransmitByte( inputs[0] );
+        usiTwiTransmitByte( inputs[1] );
+        usiTwiTransmitByte( inputs[2] );
+        usiTwiTransmitByte( inputs[3] );
+        break;
+    }
+    */

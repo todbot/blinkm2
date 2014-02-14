@@ -20,7 +20,7 @@
   */
 
 
-//#include "TinyWireS.h"                  // wrapper class for I2C slave routines
+//#include "TinyWireS.h"                // wrapper class for I2C slave routines
 #include "FastLED.h"
 #include "LEDFader.h"
 

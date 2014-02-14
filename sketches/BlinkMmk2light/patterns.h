@@ -2,12 +2,20 @@
 #ifndef PATTERNS_H
 #define PATTERNS_H
 
+/**
+ * ideas for new commands:
+ * - parameterized color ("blink_white", "blink_red", etc. become one)
+ * - "rotate leds" 
+ * - ""
+ */
 
 // can't declare these statically because Arduino loader doesn't send eeprom
 //pattern_t pattern_ee EEMEM; 
 uint8_t     ee_i2c_addr   EEMEM = 0x09; //I2C_ADDR;
 uint8_t     ee_mode       EEMEM = 0x00; //BOOT_PLAY_SCRIPT;
 patt_info_t ee_patt_info  EEMEM;
+rgb_t       ee_color      EEMEM;
+
 //uint8_t ee_patt_id    EEMEM = 0x00;
 //uint8_t ee_reps       EEMEM = 0x00;
 //uint8_t ee_playstart  EEMEM = 0x00;
@@ -41,19 +49,24 @@ patt_line_t patt_lines_hsv[] PROGMEM = {
 
 patt_line_t patt_lines_huecycle[] PROGMEM = { 
     //          H    S    V
-    {{ 'h', { 0xff,0x00,0x33 }, 200, 0 }},  // white
-    {{ 'h', { 0x00,0xff,0xff }, 100, 0 }},  // red
-    {{ 'h', { 0x2a,0xff,0xff }, 100, 0 }},  // yellow 
-    {{ 'h', { 0x54,0xff,0xff }, 100, 0 }},  // green
-    {{ 'h', { 0x7e,0xff,0xff }, 100, 0 }},  // cyan
-    {{ 'h', { 0xa8,0xff,0xff }, 100, 0 }},  // blue
-    {{ 'h', { 0xd2,0xff,0xff }, 100, 0 }},  // magenta
-    {{ 'h', { 0xff,0xff,0xff }, 100, 0 }},  // red
+    { 'h', { 0xff,0x00,0x33 }, 200, 0 },  // white
+    { 'h', { 0x00,0xff,0xff }, 100, 0 },  // red
+    { 'h', { 0x2a,0xff,0xff }, 100, 0 },  // yellow 
+    { 'h', { 0x54,0xff,0xff }, 100, 0 },  // green
+    { 'h', { 0x7e,0xff,0xff }, 100, 0 },  // cyan
+    { 'h', { 0xa8,0xff,0xff }, 100, 0 },  // blue
+    { 'h', { 0xd2,0xff,0xff }, 100, 0 },  // magenta
+    { 'h', { 0xff,0xff,0xff }, 100, 0 },  // red
 };
 
 patt_line_t patt_lines_blink_white[] PROGMEM = {
-    {{ 'c', { 0x33, 0x33, 0x33 },  50, 0 }}, // 0  white all
-    {{ 'c', { 0x00, 0x00, 0x00 },  50, 0 }}, // 1  off all
+    { 'c', { 0x33, 0x33, 0x33 },  50, 0 }, // 0  white all
+    { 'c', { 0x00, 0x00, 0x00 },  50, 0 }, // 1  off all
+};
+
+// Random color mood light
+patt_line_t patt_lines_randmood[] PROGMEM = {
+    {'H', {0x80,0x00,0x00}, 50, 0 }, // random fade to other hues
 };
 
 
@@ -87,12 +100,13 @@ patt_line_t patt_lines_stoplight[] PROGMEM = {
 */
 
 patt_line_t* patterns[] PROGMEM = {
-    (patt_line_t*) &patt_lines_rgb,       // 1
-    (patt_line_t*) &patt_lines_rgb0,      // 2
-    (patt_line_t*) &patt_lines_hsv,       // 3
-    (patt_line_t*) &patt_lines_huecycle,  // 4
+    (patt_line_t*) &patt_lines_rgb,          // 1
+    (patt_line_t*) &patt_lines_rgb0,         // 2
+    (patt_line_t*) &patt_lines_hsv,          // 3
+    (patt_line_t*) &patt_lines_huecycle,     // 4
     (patt_line_t*) &patt_lines_blink_white,  // 5
-    (patt_line_t*) &patt_lines_default,   // 6
+    (patt_line_t*) &patt_lines_randmood,      // 6
+    (patt_line_t*) &patt_lines_default,      // 7
    
     //(patt_line_t*) &patt_lines_blink_white,
     //(patt_line_t*) &patt_lines_stoplight,
@@ -105,6 +119,7 @@ uint8_t patt_lens[] PROGMEM = {
     4,
     8,
     2,
+    1,
     patt_max,
 };
 
