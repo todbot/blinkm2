@@ -54,7 +54,7 @@ void dbg_tx_hex( int d ) {
 
 
 //
-void debug_flash(void)
+void debug_flashleds(void)
 {
 #define delayt 300
 

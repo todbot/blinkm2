@@ -22,18 +22,61 @@ patt_line_t patt_lines_blink_white[] = {
     { 'c', {{ 0x00, 0x00, 0x00 }},  50, 0 }, // 1  off all
 };
 */
-
+/*
 rgb_t myc = { 
     .r = 1, .g = 2, .b =3,
 };
 patt_line_t poop = { 
     .cmd = 'c', .color = {3,4,5}, .dmillis  = 1, .ledn=0 
 };
+*/
+int ease8InOutCubic(int x) { 
+    int i = 1;
+    return 3*(x^i) - 2*(x^3);
+}
 
+uint8_t ease8InOutApprox( uint8_t i)
+{
+    if( i < 64) {
+        // start with slope 0.5
+        i /= 2;
+    } else if( i > (255 - 64)) {
+        // end with slope 0.5
+        i = 255 - i;
+        i /= 2;
+        i = 255 - i;
+    } else {
+        // in the middle, use slope 192/128 = 1.5
+        i -= 64;
+        i += (i / 2);
+        i += 32;
+    }
+    
+    return i;
+}
 
 int main()
 {
     printf("fader_funcs_tst\n");
+
+    int led_start = 30;
+    int led_end   = 60;
+    int led_range = led_end - led_start;
+    for( int i = 0; i< led_range; i++ ) { 
+        int f = (256 * i) / led_range;  // scale range to 0-255
+        int eased = ease8InOutApprox( f ) ; // get eased version
+        int p = led_start + (eased * led_range)/256;
+        printf("%d : %d : %d : %d\n", i, f, eased, p);
+    }
+
+    /*
+    for( int p=ledpos_start; p < ledpos_end; p++ ) {
+        int i = 256 * (p - ledpos_start)/ledpos_end;
+        int easedledpos = p *  ease8InOutCubic( i ) / 256;
+        printf("%d : %d : %d\n", i, p, easedledpos );
+    }
+    */
+    exit(0);
 
     rgb_t ctmp;
     for( int i=0; i< 255; i++ ) {

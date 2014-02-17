@@ -77,7 +77,7 @@ static uint8_t                  slaveAddress;  // moved from .c -=tod
 
 // permitted TX buffer sizes: 1, 2, 4, 8, 16, 32, 64, 128 or 256
 
-#define TWI_TX_BUFFER_SIZE ( 4 )
+#define TWI_TX_BUFFER_SIZE ( 8 )
 #define TWI_TX_BUFFER_MASK ( TWI_TX_BUFFER_SIZE - 1 )
 
 #if ( TWI_TX_BUFFER_SIZE & TWI_TX_BUFFER_MASK )

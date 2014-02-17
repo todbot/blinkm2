@@ -17,13 +17,13 @@
 #define DBG_UART_ENABLE		1
 
 /* User setting -> Output pin the software UART */
-#define DBG_UART_TX_PORT	PORTB
-#define DBG_UART_TX_DDR		DDRB
-#define DBG_UART_TX_PIN		PB0
+//#define DBG_UART_TX_PORT	PORTB
+//#define DBG_UART_TX_DDR		DDRB
+//#define DBG_UART_TX_PIN		PB0
 
 #define DBG_UART_TX_PORT	PORTA
 #define DBG_UART_TX_DDR		DDRA
-#define DBG_UART_TX_PIN		PA1
+#define DBG_UART_TX_PIN		PA1   // maxm pin A1
 
 /* User setting -> Software UART baudrate. */
 #define DBG_UART_BAUDRATE	38400

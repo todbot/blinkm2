@@ -43,10 +43,21 @@ extern "C" {
 #include "blinkm_types.h"
 //#include "FastLED.h"
 
+// BlinkM MaxM pins 
+const int redPin = 8;   // PB2 OC0A
+const int grnPin = 7;   // PA7 OC0B
+const int bluPin = 5;   // PA5 OC1B
+const int sdaPin = 6;   // PA6 
+const int sclPin = 9;   // PA4
+const int in0Pin = A0;  // PA0
+const int in1Pin = A1;  // PA1
+const int in2Pin = A2;  // PA2
+const int in3Pin = A3;  // PA3
 
 // How many leds in your strip?
-///const int nLEDs = 4;
-const int nLEDs = 16;
+const int nLEDs = 4;
+///const int nLEDs = 16;
+//const int nLEDs = 19;
 const int wsnLEDs = 3*nLEDs;  // needed for light_ws2812 funcs
 
 // fudge how fast it gets to target color
@@ -60,7 +71,8 @@ const uint8_t patt_fudge_percent = 50;
 const int DATA_PIN = 0;   // maxm A0
 //const int DATA_PIN = 7; // blinkmmk2
 
-const uint8_t patt_max=16;
+// size of largest light pattern
+const uint8_t patt_max = 16;
 
 const  uint8_t  led_update_millis = 10;  // tick msec
 static uint32_t led_update_next;
@@ -80,6 +92,9 @@ rgbfader_t faders[nLEDs];
 
 patt_info_t patt_info;
 patt_line_t pattline;  // temp pattern holder
+
+uint8_t fadespeed;
+uint8_t ledn;
 
 uint8_t inputs[4];
 uint8_t bigIinput = 0xff;
@@ -109,6 +124,8 @@ void setup()
     dbg_tx_str("\n");
 
     //if( i2c_addr==0 || i2c_addr>0x7f) i2c_addr = I2C_ADDR;  // just in case
+    pinMode( sclPin, INPUT_PULLUP );
+    pinMode( sdaPin, INPUT_PULLUP );
     usiTwiSlaveInit( I2C_SLAVE_ADDR );
 
     // load up EEPROM from flash, 
@@ -132,7 +149,7 @@ void setup()
     ws2812_sendarray( (uint8_t*)leds, wsnLEDs );
     //ws2812_setleds( (uint8_t*)leds, nLEDs );
 
-    debug_flash();
+    debug_flashleds();
 
     led_update_next = millis();
 
@@ -142,13 +159,14 @@ void setup()
     patt_info.end   = 0;
 
     startPlaying();
+
 }
 
 //
 void loop()  
 { 
     updateLEDs();
-    handleInputs();
+    //handleInputs();
     handleI2C();
 }
 
@@ -177,7 +195,7 @@ void handleInputs(void)
     inputs[1] = analogRead( 1 );
     inputs[2] = analogRead( 5 );
     inputs[3] = analogRead( 6 );
-
+#if 0
     // handle 'bigI' logic
     if( bigIinput != 0xff && bigIval != 0xff ) { // 0xff means not enabled
         if( inputs[ bigIinput ] > bigIval ) {
@@ -185,9 +203,8 @@ void handleInputs(void)
             //script_tick = 255;  // sigh // FIXME: only works if byte
         }
     }
+#endif
 }
-
-#if 1
 
 //
 inline
@@ -197,31 +214,46 @@ void handlePattLine(void)
     int      ttmp = pattline.dmillis;
     uint16_t ntmp = pattline.ledn;
 
-    ttmp -= (ttmp * patt_fudge_percent / 100); 
-
-    if( ttmp < 1 ) ttmp = 1;
-
     if( pattline.cmd==0 && ttmp == 0 ) {
         return;
     }
 
+    if( ledn ) { 
+        ntmp = ledn;
+    }
+    if( fadespeed ) { 
+        ttmp = fadespeed;
+    } else { 
+        ttmp -= (ttmp * patt_fudge_percent / 100); 
+    }
+    if( ttmp < 1 ) ttmp = 1;
+
+    // set RGB color now
     if(      pattline.cmd == 'n' ) {
         ttmp = 1;  
         ledfader_setDest( ctmp, ttmp, ntmp );
     }
+    // fade to RGB color
     else if( pattline.cmd == 'c' ) { 
         ledfader_setDest( ctmp, ttmp, ntmp );
     }
+    // fade to random RGB color
     else if( pattline.cmd == 'C' ) { 
         ctmp.r = randRange(ctmp.r, leds[0].r );
         ctmp.g = randRange(ctmp.g, leds[0].g ); ///gamma(random(255));
         ctmp.b = randRange(ctmp.b, leds[0].b );
         ledfader_setDest( ctmp, ttmp, ntmp );
     }
+    // set fade speed
+    else if( pattline.cmd == 'f' ) { 
+        fadespeed = pattline.args[1];
+    }
+    // fade to HSB hue
     else if( pattline.cmd == 'h' ) { 
         hsvToRgb(&ctmp);
         ledfader_setDest( ctmp, ttmp, ntmp ); 
     }
+    // fade to random HSB hue
     else if( pattline.cmd == 'H' ) { 
         ctmp.h = randRange(ctmp.h, leds[0].h );
         ctmp.s = randRange(ctmp.s, leds[0].s );
@@ -229,14 +261,21 @@ void handlePattLine(void)
         hsvToRgb(&ctmp);
         ledfader_setDest( ctmp, ttmp, ntmp );
     } 
+    // bigI input (absolute jump)
     else if( pattline.cmd == 'I' ) { 
         bigIinput = pattline.args[1]; 
         bigIval   = pattline.args[2];
         bigIjump  = pattline.args[3];
     }
+    // mk2: set which LED
+    else if( pattline.cmd == 'L' ) {
+        ledn = pattline.args[1];
+    }
+    // stop script
     else if( pattline.cmd == 'o' ) { 
         playing = 0;
     }
+    // play script
     else if( pattline.cmd == 'p' ) { 
         patt_info.id    = pattline.args[1];
         patt_info.count = 0; //pattline.args[2];
@@ -244,11 +283,11 @@ void handlePattLine(void)
         patt_info.end   = 4; //pattline.args[4];
         startPlaying();
     }
+    // wat?
     else if( pattline.cmd == 'T' ) { 
         playing = 0;
     }
   
-
     dbg_tx_strP(PSTR("freeRam:"));
     dbg_tx_hex( freeRam() );
     dbg_tx_str("\n");
@@ -280,41 +319,42 @@ void handleI2C(void)
     if(      pattline.cmd == 'o' ) {
         playing=0;
     }
-    // ?
-    else if( pattline.cmd == 'T' ) { 
-        readI2Cvals(1);
-        handlePattLine();
-    }
     // fadespeed and timeadj commands
-    else if( pattline.cmd == 'f' ||
-             pattline.cmd == 't' ) {
-        readI2Cvals(2);
+    else if( pattline.cmd == 'f' ||   // fadespeed
+             pattline.cmd == 't' ||   // time adj
+             pattline.cmd == 'T' ||   // ?
+             pattline.cmd == 'L' ) {  // mk2: set which LED
+        readI2Cvals(1);
         handlePattLine();
     } 
     // color commands
-    else if( pattline.cmd == 'n' ||
-             pattline.cmd == 'c' ||
-             pattline.cmd == 'C' ||
-             pattline.cmd == 'h' ||
-             pattline.cmd == 'H' ) {
+    else if( pattline.cmd == 'n' ||   // set color now
+             pattline.cmd == 'c' ||   // fade to rgb
+             pattline.cmd == 'C' ||   // fade to random rgb
+             pattline.cmd == 'h' ||   // fade to hsb
+             pattline.cmd == 'H' ) {  // fade to random hsb
         readI2Ccolor();   // read r,g,b (or h,s,v)
         
-        pattline.dmillis = 30;  // FIXME:
+        pattline.dmillis = 0;   // FIXME:
         pattline.ledn = 0;      // FIXME:
         
         handlePattLine();
     }
     // play light pattern
-    else if( pattline.cmd =='p' ) {
+    else if( pattline.cmd =='p' ) {   // play
         readI2Cvals(3);
         handlePattLine();
+    }
+    // mk2: get fadespeed
+    else if( pattline.cmd == 'F' ) { // get fadespeed
+        usiTwiTransmitByte( fadespeed );
     }
     // get current RGB color
     else if( pattline.cmd == 'g' ) {  
         // FIXME: choose LED
-        usiTwiTransmitByte( leds[0].r );
-        usiTwiTransmitByte( leds[0].g );
-        usiTwiTransmitByte( leds[0].b );
+        usiTwiTransmitByte( 0x33 ); //leds[0].r );
+        usiTwiTransmitByte( 0x44 ); //leds[0].g );
+        usiTwiTransmitByte( 0x55 ); //leds[0].b );
     }
     // get i2c address 
     else if( pattline.cmd == 'a' ) { 
@@ -356,9 +396,9 @@ void handleI2C(void)
         usiTwiTransmitByte( inputs[2] );
         usiTwiTransmitByte( inputs[3] );
     }
-
+    
 }
-#endif
+
 
 //
 inline void displayLEDs()
