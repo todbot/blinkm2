@@ -2,6 +2,8 @@
 #ifndef PATTERNS_H
 #define PATTERNS_H
 
+#include "blinkm_types.h"
+
 /**
  * ideas for new commands:
  * - parameterized color ("blink_white", "blink_red", etc. become one)

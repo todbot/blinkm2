@@ -22,6 +22,8 @@
   *  PWM  SDA   (D  6)  PA6  7|    |8   PA5  (D  5)        PWM
   *                           +----+
   *
+  *
+  *    
   */
 
 // comment out to remove debugging to a soft serial 
@@ -36,8 +38,6 @@
 extern "C" {
   #include "usiTwiSlave.h"
   #include "light_ws2812.h"
-
-//  #include "debugtools.h"
 }
 
 #include "blinkm_types.h"
@@ -54,9 +54,9 @@ const int in1Pin = A1;  // PA1
 const int in2Pin = A2;  // PA2
 const int in3Pin = A3;  // PA3
 
-// How many leds in your strip?
-const int nLEDs = 4;
-///const int nLEDs = 16;
+// How many leds in the strip
+//const int nLEDs = 4;
+const int nLEDs = 16;
 //const int nLEDs = 19;
 const int wsnLEDs = 3*nLEDs;  // needed for light_ws2812 funcs
 
@@ -102,9 +102,9 @@ uint8_t bigIval = 0xff;
 uint8_t bigIjump;
 
 
-#include "debugtools.h"
-
 //-----------------------------
+
+#include "debugtools.h"
 
 // functions for doing smooth led fading
 #include "ledfader_funcs.h"
@@ -228,8 +228,12 @@ void handlePattLine(void)
     }
     if( ttmp < 1 ) ttmp = 1;
 
+    // mk2: fade led, with millis dur & ledn
+    if(      pattline.cmd == '!' ) {
+        ledfader_setDest( ctmp, ttmp, ntmp );
+    }
     // set RGB color now
-    if(      pattline.cmd == 'n' ) {
+    else if( pattline.cmd == 'n' ) {
         ttmp = 1;  
         ledfader_setDest( ctmp, ttmp, ntmp );
     }
@@ -239,9 +243,9 @@ void handlePattLine(void)
     }
     // fade to random RGB color
     else if( pattline.cmd == 'C' ) { 
-        ctmp.r = randRange(ctmp.r, leds[0].r );
-        ctmp.g = randRange(ctmp.g, leds[0].g ); ///gamma(random(255));
-        ctmp.b = randRange(ctmp.b, leds[0].b );
+        ctmp.r = randRange(ctmp.r, leds[ledn].r );
+        ctmp.g = randRange(ctmp.g, leds[ledn].g ); ///gamma(random(255));
+        ctmp.b = randRange(ctmp.b, leds[ledn].b );
         ledfader_setDest( ctmp, ttmp, ntmp );
     }
     // set fade speed
@@ -268,8 +272,17 @@ void handlePattLine(void)
         bigIjump  = pattline.args[3];
     }
     // mk2: set which LED
-    else if( pattline.cmd == 'L' ) {
+    else if( pattline.cmd == 'l' ) {
         ledn = pattline.args[1];
+    }
+    // mk2: rotate
+    else if( pattline.cmd == 'r' ) {
+        pattline.args[1] = -pattline.args[1];
+        for( int j=0; j< pattline.args[1]; j++ ) { 
+            CRGB first = leds[0];
+            for(uint8_t i = 1; i < nLEDs; i++) { leds[i-1] = leds[i]; }
+            leds[nLEDs-1] = first;
+        }
     }
     // stop script
     else if( pattline.cmd == 'o' ) { 
@@ -323,7 +336,8 @@ void handleI2C(void)
     else if( pattline.cmd == 'f' ||   // fadespeed
              pattline.cmd == 't' ||   // time adj
              pattline.cmd == 'T' ||   // ?
-             pattline.cmd == 'L' ) {  // mk2: set which LED
+             pattline.cmd == 'l' ||   // mk2: set which LED
+             pattline.cmd == 'r' ) {  // mk2: rotate led set
         readI2Cvals(1);
         handlePattLine();
     } 
@@ -340,6 +354,11 @@ void handleI2C(void)
         
         handlePattLine();
     }
+    // mk2: read mk2 color   // FIXME: test
+    else if( pattline.cmd == '!' ) { 
+        readI2Cvals(3+2+1); // read color, time, ledn
+        handlePattLine();        
+    }
     // play light pattern
     else if( pattline.cmd =='p' ) {   // play
         readI2Cvals(3);
@@ -351,10 +370,9 @@ void handleI2C(void)
     }
     // get current RGB color
     else if( pattline.cmd == 'g' ) {  
-        // FIXME: choose LED
-        usiTwiTransmitByte( 0x33 ); //leds[0].r );
-        usiTwiTransmitByte( 0x44 ); //leds[0].g );
-        usiTwiTransmitByte( 0x55 ); //leds[0].b );
+        usiTwiTransmitByte( leds[ledn].r );
+        usiTwiTransmitByte( leds[ledn].g );
+        usiTwiTransmitByte( leds[ledn].b );
     }
     // get i2c address 
     else if( pattline.cmd == 'a' ) { 
@@ -388,6 +406,17 @@ void handleI2C(void)
         }
         else {                 // flash-based scripts
         }
+    }
+    else if( pattline.cmd == 'W' ) {   // FIXME: doesn't work
+        readI2Cvals(7);   // get, but ignore script_id for now
+        if( pattline.args[1] == 0 ) { // eeprom script
+            if( pattline.args[2] < patt_max+1 ) {  // FIXME
+                eeprom_write_block( &(pattline.args[1]), 
+                                    &(ee_patt_lines[ pattline.args[2] ]),
+                                        sizeof(patt_line_t));
+                } // else too big
+            } else {           // flash-based script
+            }
     }
     // return current input values
     else if( pattline.cmd == 'i' ) {
