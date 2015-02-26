@@ -5,6 +5,7 @@
   *
   * From: blinkm/variants/tiny14/pins_arduino.h  
   * (originally from: http://hlt.media.mit.edu/?p=1695 )
+  *
   * ATMEL ATTINY84 / ARDUINO
   *
   *                           +-\/-+
