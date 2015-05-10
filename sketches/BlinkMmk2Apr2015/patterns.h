@@ -11,11 +11,67 @@ struct patternline_t {
     uint8_t ledn;     // number of led, or 0 for all
 };
 
+struct pattern_t {
+    patternline_t* patt;
+    uint8_t len;
+    uint8_t count;
+};
 
 // can't declare these statically because Arduino loader doesn't send eeprom
 //pattern_t pattern_ee EEMEM; 
 patternline_t patternlines_ee[patt_max] EEMEM;
 
+const patternline_t patternlines_default[] PROGMEM = {
+    { { 0x7f, 0x7f, 0x7f },  100, 0 }, // 13 white B
+    { { 0x22, 0x00, 0x00 },  100, 0 }, // 0  red A
+    { { 0x00, 0x22, 0x00 },  100, 0 }, // 4  grn A
+    { { 0x00, 0x00, 0x22 },  100, 0 }, // 6  blu A
+    { { 0x00, 0x00, 0x00 },  100, 0 }, // 14 off B
+};
+
+const patternline_t patternlines_rgb[] PROGMEM = {
+    { { 0x33, 0x00, 0x00 },  100, 0 }, // 0  red all
+    { { 0x00, 0x33, 0x00 },  100, 0 }, // 1  grn all
+    { { 0x00, 0x00, 0x33 },  100, 0 }, // 2  blu all
+};
+
+const patternline_t patternlines_blink_white[] PROGMEM = {
+    { { 0x11, 0x11, 0x11 },  50, 0 }, // 0  white all
+    { { 0x00, 0x00, 0x00 },  50, 0 }, // 1  off all
+};
+
+const patternline_t patternlines_stoplight[] PROGMEM = {
+    { { 0x00, 0x11, 0x00 },  50, 0 }, // 0  red
+    { { 0xdd, 0x11, 0x00 },  50, 0 }, // 1  yellow
+    { { 0x11, 0x00, 0x11 },  50, 0 }, // 1  greenblue
+};
+
+const patternline_t* const patterns[] PROGMEM = {
+    (const patternline_t*) &patternlines_default,
+    (const patternline_t*) &patternlines_rgb,
+    (const patternline_t*) &patternlines_blink_white,
+    (const patternline_t*) &patternlines_stoplight,
+};
+
+const pattern_t patternz[] PROGMEM = {
+    { (patternline_t*) &patternlines_default,     5, 0 },
+    { (patternline_t*) &patternlines_rgb,         3, 0 },
+    { (patternline_t*) &patternlines_blink_white, 2, 0 },
+    { (patternline_t*) &patternlines_stoplight,   3, 0 },
+    { (patternline_t*) &patternlines_default,     5, 0 },
+};
+
+
+// this is so lame, but can't create a flexible array of patternlines in a struct
+const int pattern_lens[] PROGMEM = {
+    5,
+    3,
+    2,
+    3,
+};
+
+
+/*
 patternline_t patternlines_mem[]  = {
     //    G     R     B    fade ledn
     { { 0x00, 0x11, 0x00 }, 100, 0 }, // 0  red A
@@ -35,14 +91,7 @@ patternline_t patternlines_mem[]  = {
     { { 0x40, 0x40, 0x40 }, 100, 0 }, // 14 off B
     { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
 };
-
-const patternline_t patternlines_default[] PROGMEM = {
-    { { 0x22, 0x00, 0x00 },  100, 0 }, // 0  red A
-    { { 0x00, 0x22, 0x00 },  100, 0 }, // 4  grn A
-    { { 0x00, 0x00, 0x22 },  100, 0 }, // 6  blu A
-    { { 0x7f, 0x7f, 0x7f },  100, 0 }, // 13 white B
-    { { 0x00, 0x00, 0x00 },  100, 0 }, // 14 off B
-};
+*/
 
 #if 0
 patternline_t patternlines_default[] PROGMEM = {
@@ -65,39 +114,6 @@ patternline_t patternlines_default[] PROGMEM = {
     { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
 };
 #endif
-
-const patternline_t patternlines_rgb[] PROGMEM = {
-    { { 0x00, 0x11, 0x00 },  50, 0 }, // 0  red all
-    { { 0x11, 0x00, 0x00 },  50, 0 }, // 1  grn all
-    { { 0x00, 0x00, 0x11 },  50, 0 }, // 2  blu all
-};
-
-const patternline_t patternlines_blink_white[] PROGMEM = {
-    { { 0x11, 0x11, 0x11 },  50, 0 }, // 0  white all
-    { { 0x00, 0x00, 0x00 },  50, 0 }, // 1  off all
-};
-
-const patternline_t patternlines_stoplight[] PROGMEM = {
-    { { 0x00, 0x11, 0x00 },  50, 0 }, // 0  red
-    { { 0xdd, 0x11, 0x00 },  50, 0 }, // 1  yellow
-    { { 0x11, 0x00, 0x11 },  50, 0 }, // 1  greenblue
-};
-
-const patternline_t** const patterns[] PROGMEM = {
-    (const patternline_t**) &patternlines_default,
-    (const patternline_t**) &patternlines_rgb,
-    (const patternline_t**) &patternlines_blink_white,
-    (const patternline_t**) &patternlines_stoplight,
-};
-
-// this is so lame, but can't create a flexible array of patternlines in a struct
-const int pattern_lens[] PROGMEM = {
-    5,
-    3,
-    2,
-    3,
-};
-
 
 #endif
 

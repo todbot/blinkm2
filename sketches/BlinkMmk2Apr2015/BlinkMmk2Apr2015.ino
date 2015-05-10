@@ -54,6 +54,7 @@ patternline_t pltmp;  // temp pattern holder
 byte cmd;
 //byte r,g,b;
 
+uint8_t script_id;
 uint8_t playpos   = 0; // current play position
 uint8_t playstart = 0; // start play position
 uint8_t playend   = patt_max; // end play position
@@ -70,6 +71,8 @@ CRGB dest;
 CRGB ctmp;    // temporary color
 fract16 overlay_amount;
 fract16 overlay_inc;
+fract16 overlay_amounts[NUM_LEDS];
+fract16 overlay_incs[NUM_LEDS];
 
 const uint32_t led_update_millis = 10;  // tick msec
 uint32_t led_update_next;
@@ -77,6 +80,7 @@ uint32_t pattern_update_next;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
+uint8_t redtoggle;
 
 void setup()
 {
@@ -86,29 +90,34 @@ void setup()
 
   TinyWireS.begin(I2C_SLAVE_ADDR);
 
-  playing = 1;
-  playend = 5;
+  //playing = 1;
+  //playend = 3;
+  //overlay_amount = 0;
   
   // load up EEPROM from flash, 
   // to deal with fact that Arduino uploader doesn't upload EEPROM
   // FIXME: need to check if we need to do this
-  //ptmp.len = patt_max;
-  //ptmp.lines = patternlines_ee;
+  //pltmp.len = 5; //patt_max;
+  //pltmp.lines = patternlines_ee;
   //eeprom_write_block( &pltmp, &pattern_ee, sizeof(pattern_t) );
-  /*
+
   for( uint8_t i=0; i<patt_max; i++ ) {
     memcpy_P( &pltmp, &(patternlines_default[i]), sizeof(patternline_t) ); 
     eeprom_write_block( &pltmp, &(patternlines_ee[i]), sizeof(patternline_t) );
   }
-  */
+
+  //  FIXME: if play on boot
+  script_id = 2;
+  play_script();
+  
   //digitalWrite(grnPin,HIGH);
 }
 
 //
 void loop()
 {
-  updateLEDState();
-  //checkI2C();
+  update_led_state();
+  //check_i2c();
 }
 
 
@@ -130,7 +139,43 @@ void calculate_overlay_inc()
 }
 
 //
-void updateLEDs(void)
+void get_next_patternline()
+{
+  if( script_id == 0 ) { // eeprom
+    eeprom_read_block(&pltmp, &patternlines_ee[playpos],sizeof(patternline_t));
+  } else {
+    memcpy_P(&pltmp, &patterns[ script_id ][playpos], sizeof(patternline_t));
+    //const patternline_t* patt = patterns[ 1 ];
+    //memcpy_P(&pltmp, &patt[playpos], sizeof(patternline_t));
+    //memcpy_P(&pltmp,&(patternlines_default[playpos]),sizeof(patternline_t));
+    //memcpy_P(&pltmp,  &(patternlines_rgb[playpos]),sizeof(patternline_t));
+  }
+  
+  ctmp = pltmp.color;
+  ttmp = pltmp.dmillis * 10;
+  ntmp = pltmp.ledn;
+  
+}
+
+//
+void play_script()
+{
+  if( script_id == 0 ) {
+    playend = 5;  // FIXME:
+  }
+  else { 
+    playend = pgm_read_byte( script_id );
+  }
+  playpos = 0;
+  playcount = 0;
+  playing = 1;
+  overlay_amount = 0;
+
+  get_next_patternline();
+}
+
+//
+void update_leds()
 {
   if( overlay_amount < 250 ) { // 97.6% arbitrary
     ctmp = blend( curr, dest, (overlay_amount) );
@@ -150,13 +195,14 @@ void updateLEDs(void)
 
 }
 
+
 //
 // updateLEDState() is the main user-land function that:
 // - periodically calls the rgb fader code to fade any actively moving colors
 // - controls sequencing of a light pattern, if playing
 // - ///triggers pattern playing on USB disconnect
 //
-void updateLEDState(void)
+void update_led_state()
 {
     uint32_t now = millis();
     
@@ -164,7 +210,7 @@ void updateLEDState(void)
     if( (long)(now - led_update_next) > 0 ) {
       led_update_next += led_update_millis;
       
-      updateLEDs();
+      update_leds();
       
       /*      
       // check for non-computer power up
@@ -186,16 +232,10 @@ void updateLEDState(void)
     // playing light pattern
     if( playing ) {
       if( (long)(now - pattern_update_next) > 0  ) { // time to get next line
-        digitalWrite(redPin, !digitalRead(redPin));
+        digitalWrite(grnPin, (redtoggle++)%2 );
         
-        //memcpy( &pltmp, &patternlines_mem[playpos], sizeof(patternline_t) );
-        //eeprom_read_block(&pltmp,&patternlines_ee[playpos],sizeof(patternline_t));
-        memcpy_P(&pltmp,&(patternlines_default[playpos]),sizeof(patternline_t));
+        get_next_patternline();
         
-        ctmp = pltmp.color;
-        ttmp = pltmp.dmillis * 10;
-
-        //ntmp = pltmp.ledn;
         if( ttmp == 0 && ctmp.r==0 && ctmp.g==0 && ctmp.b==0 ) {
           // skip lines set to zero
         } else {
@@ -206,6 +246,7 @@ void updateLEDState(void)
           overlay_amount = 0;
           calculate_overlay_inc();
         }
+        // prepare to go to next line
         playpos++;
         if( playpos == playend ) {
           playpos = playstart; // loop the pattern
@@ -224,7 +265,7 @@ void updateLEDState(void)
 
 
 //
-void checkI2C()
+void check_i2c()
 {
 
   if( TinyWireS.available() ) { 
@@ -268,7 +309,29 @@ void checkI2C()
   }
 }
 
+/*
+//
+void updateLEDsNew()
+{
+  for( int i = 0; i<NUM_LEDS; i++ ) {
+    overlay_amount = overlay_amounts[i];
+    overlay_inc = overlay_incs[i];
+    if( overlay_amount < 250 ) { // 97.6% arbitrary
+      ctmp = blend( curr, dest, (overlay_amount) );
+      //ctmp = blend( curr, dest, (overlay_amount>>8) );
+      //ctmp = dest;
+      overlay_amount += overlay_inc;
+    }
+    else {
+      ctmp = dest;
+    }
 
+    strip.setPixelColor( i, ctmp.r, ctmp.g, ctmp.b );
+  }
+  strip.show();
+
+}
+*/
 
 
 
