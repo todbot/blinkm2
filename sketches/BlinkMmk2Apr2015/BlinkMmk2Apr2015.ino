@@ -80,7 +80,7 @@ uint32_t pattern_update_next;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-uint8_t redtoggle;
+uint8_t ledtoggle;
 
 void setup()
 {
@@ -90,10 +90,6 @@ void setup()
 
   TinyWireS.begin(I2C_SLAVE_ADDR);
 
-  //playing = 1;
-  //playend = 3;
-  //overlay_amount = 0;
-  
   // load up EEPROM from flash, 
   // to deal with fact that Arduino uploader doesn't upload EEPROM
   // FIXME: need to check if we need to do this
@@ -106,8 +102,8 @@ void setup()
     eeprom_write_block( &pltmp, &(patternlines_ee[i]), sizeof(patternline_t) );
   }
 
-  //  FIXME: if play on boot
-  script_id = 2;
+  //  FIXME: check for play on boot
+  script_id = 1;
   play_script();
   
   //digitalWrite(grnPin,HIGH);
@@ -139,39 +135,49 @@ void calculate_overlay_inc()
 }
 
 //
+void play_script()
+{
+  if( script_id == 0 ) {
+    playend = 5;  // FIXME:
+    playcount = 0;  // infinite
+  }
+  else { 
+    playend = 3;  // pgm_read_byte( script_id );
+    playcount = 0; /// FIXME: should be read
+  }
+  
+  playpos = 0;
+  playing = 1;
+  overlay_amount = 0;
+
+  get_next_patternline();
+}
+
+//
 void get_next_patternline()
 {
   if( script_id == 0 ) { // eeprom
     eeprom_read_block(&pltmp, &patternlines_ee[playpos],sizeof(patternline_t));
   } else {
     memcpy_P(&pltmp, &patterns[ script_id ][playpos], sizeof(patternline_t));
-    //const patternline_t* patt = patterns[ 1 ];
-    //memcpy_P(&pltmp, &patt[playpos], sizeof(patternline_t));
-    //memcpy_P(&pltmp,&(patternlines_default[playpos]),sizeof(patternline_t));
-    //memcpy_P(&pltmp,  &(patternlines_rgb[playpos]),sizeof(patternline_t));
   }
   
   ctmp = pltmp.color;
   ttmp = pltmp.dmillis * 10;
   ntmp = pltmp.ledn;
+
+  if( ttmp == 0 && ctmp.r==0 && ctmp.g==0 && ctmp.b==0 ) {
+    // skip lines set to zero
+  }
+  else {
+    curr = dest;
+    dest = ctmp;
+    //fade_millis = ttmp;
+    fade_millis = ttmp / 2;
+    overlay_amount = 0;
+    calculate_overlay_inc();
+  }
   
-}
-
-//
-void play_script()
-{
-  if( script_id == 0 ) {
-    playend = 5;  // FIXME:
-  }
-  else { 
-    playend = pgm_read_byte( script_id );
-  }
-  playpos = 0;
-  playcount = 0;
-  playing = 1;
-  overlay_amount = 0;
-
-  get_next_patternline();
 }
 
 //
@@ -212,40 +218,15 @@ void update_led_state()
       
       update_leds();
       
-      /*      
-      // check for non-computer power up
-      if( !usbHasBeenSetup ) {
-        if( !playing && now > 500 ) {  // 500 msec wait
-          playing = 2;
-          startPlaying();
-        }
-      }
-      else {  // else usb is setup...
-        if( playing == 2 ) { // ...but we started a powerup play, so reset
-          off();
-        }
-      }
-      */
-      
     } // led_update_next
 
     // playing light pattern
     if( playing ) {
       if( (long)(now - pattern_update_next) > 0  ) { // time to get next line
-        digitalWrite(grnPin, (redtoggle++)%2 );
+        digitalWrite(grnPin, (ledtoggle++)%2 );
         
         get_next_patternline();
         
-        if( ttmp == 0 && ctmp.r==0 && ctmp.g==0 && ctmp.b==0 ) {
-          // skip lines set to zero
-        } else {
-          curr = dest;
-          dest = ctmp;
-          //fade_millis = ttmp;
-          fade_millis = ttmp / 2;
-          overlay_amount = 0;
-          calculate_overlay_inc();
-        }
         // prepare to go to next line
         playpos++;
         if( playpos == playend ) {
