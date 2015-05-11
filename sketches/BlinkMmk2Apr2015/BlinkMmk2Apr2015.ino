@@ -27,7 +27,6 @@ const int bluPin = 1;  // PWM, will blink when programming
 const int sdaPin = 0;  // PWM, 'd' pin, can be digital I/O
 const int sclPin = 2;  // A/D, 'c' pin, can be digital I/O, or analog input
 /*
-//
 // BlinkM MaxM pins (see below for where this came from)
 const int redPin = 8;   // PB2 OC0A
 const int grnPin = 7;   // PA7 OC0B
@@ -38,36 +37,44 @@ const int in0Pin = A0;  // PA0
 const int in1Pin = A1;  // PA1
 const int in2Pin = A2;  // PA2
 const int in3Pin = A3;  // PA3
-//
 */
 
 
-#define I2C_SLAVE_ADDR  0x09     // default BlinkM addr
+#define I2C_ADDR  0x09     // default BlinkM addr
 #define NUM_LEDS 8
 #define LED_PIN 1  // blue pin
 
 #define patt_max 32  // FIXME:
 
+// eeprom begin: muncha buncha eeprom
+uint8_t  ee_i2c_addr         EEMEM = I2C_ADDR;
+uint8_t  ee_boot_mode        EEMEM = 0x00; // FIXME: BOOT_PLAY_SCRIPT;
+uint8_t  ee_boot_script_id   EEMEM = 0x00;
+uint8_t  ee_boot_reps        EEMEM = 0x00;
+uint8_t  ee_boot_fadespeed   EEMEM = 0x08;
+uint8_t  ee_boot_timeadj     EEMEM = 0x00;
+uint8_t  ee_unused2          EEMEM = 0xDA;
 
-patternline_t pltmp;  // temp pattern holder
+// NOTE: can't declare EEPROM statically because Arduino loader doesn't send eeprom
+patternline_t patternlines_ee[patt_max] EEMEM;
 
 byte cmd;
-//byte r,g,b;
 
 uint8_t script_id;
 uint8_t playpos   = 0; // current play position
 uint8_t playstart = 0; // start play position
 uint8_t playend   = patt_max; // end play position
 uint8_t playcount = 0; // number of times to play loop, or 0=infinite
-uint8_t playing; // playing values: 0 = off, 1 = normal, 2 == playing from powerup playing=3 direct led addressing FIXME: 
+uint8_t playing; // playing values: 0=off, 1=normal, 2=playing from powerup playing=3 direct led addressing FIXME: 
 
 uint16_t fade_millis;
 
+patternline_t pltmp;  // temp pattern holder
 uint16_t ttmp;   // temp time holder
 uint8_t ntmp;    // temp ledn holder
 
-CRGB curr;
-CRGB dest;
+CRGB curr;    // current/start color
+CRGB dest;    // destination color
 CRGB ctmp;    // temporary color
 fract16 overlay_amount;
 fract16 overlay_inc;
@@ -80,30 +87,26 @@ uint32_t pattern_update_next;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-uint8_t ledtoggle;
+uint8_t ledtoggle;  // temp debug
 
+//
 void setup()
 {
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   strip.setBrightness(128);
 
-  TinyWireS.begin(I2C_SLAVE_ADDR);
+  TinyWireS.begin(I2C_ADDR);
 
   // load up EEPROM from flash, 
   // to deal with fact that Arduino uploader doesn't upload EEPROM
-  // FIXME: need to check if we need to do this
-  //pltmp.len = 5; //patt_max;
-  //pltmp.lines = patternlines_ee;
-  //eeprom_write_block( &pltmp, &pattern_ee, sizeof(pattern_t) );
-
   for( uint8_t i=0; i<patt_max; i++ ) {
     memcpy_P( &pltmp, &(patternlines_default[i]), sizeof(patternline_t) ); 
     eeprom_write_block( &pltmp, &(patternlines_ee[i]), sizeof(patternline_t) );
   }
 
   //  FIXME: check for play on boot
-  script_id = 1;
+  script_id = 3;
   play_script();
   
   //digitalWrite(grnPin,HIGH);
@@ -139,11 +142,11 @@ void play_script()
 {
   if( script_id == 0 ) {
     playend = 5;  // FIXME:
-    playcount = 0;  // infinite
+    playcount = 0;  // FIXME: infinite
   }
   else { 
-    playend = 3;  // pgm_read_byte( script_id );
-    playcount = 0; /// FIXME: should be read
+    playend = pgm_read_byte( &pattern_lens[script_id] ); 
+    playcount = 0;
   }
   
   playpos = 0;
@@ -153,31 +156,35 @@ void play_script()
   get_next_patternline();
 }
 
+
 //
 void get_next_patternline()
 {
   if( script_id == 0 ) { // eeprom
     eeprom_read_block(&pltmp, &patternlines_ee[playpos],sizeof(patternline_t));
   } else {
-    memcpy_P(&pltmp, &patterns[ script_id ][playpos], sizeof(patternline_t));
+    //memcpy_P(&pltmp, &patterns[ script_id ][playpos], sizeof(patternline_t)); // does not work
+    //memcpy_P(&pltmp, &patternlines_rgb[playpos], sizeof(patternline_t)); // works
+    //memcpy_P(&pltmp, &patternlines_blink_white[playpos], sizeof(patternline_t)); // works
+    patternline_t* p;
+    memcpy_P( &p, &patterns[script_id], sizeof(patternline_t*) ); // read in start addr of patternline set
+    memcpy_P(&pltmp, &p[playpos], sizeof(patternline_t));  // read in patternline
   }
   
   ctmp = pltmp.color;
   ttmp = pltmp.dmillis * 10;
   ntmp = pltmp.ledn;
-
+  
   if( ttmp == 0 && ctmp.r==0 && ctmp.g==0 && ctmp.b==0 ) {
     // skip lines set to zero
   }
   else {
     curr = dest;
     dest = ctmp;
-    //fade_millis = ttmp;
-    fade_millis = ttmp / 2;
+    fade_millis = ttmp / 2;      //fade_millis = ttmp;
     overlay_amount = 0;
     calculate_overlay_inc();
   }
-  
 }
 
 //
@@ -226,6 +233,7 @@ void update_led_state()
         digitalWrite(grnPin, (ledtoggle++)%2 );
         
         get_next_patternline();
+        
         
         // prepare to go to next line
         playpos++;

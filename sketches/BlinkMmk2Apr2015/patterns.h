@@ -10,9 +10,7 @@ struct patternline_t {
     uint8_t ledn;     // number of led, or 0 for all
 };
 
-// NOTE: can't declare EEPROM statically because Arduino loader doesn't send eeprom
-patternline_t patternlines_ee[patt_max] EEMEM;
-    
+
 const patternline_t patternlines_default[] PROGMEM = {
     { { 0x7f, 0x7f, 0x7f },  100, 0 }, // 13 white B
     { { 0x22, 0x00, 0x00 },  100, 0 }, // 0  red A
@@ -33,17 +31,17 @@ const patternline_t patternlines_blink_white[] PROGMEM = {
 };
 
 const patternline_t patternlines_stoplight[] PROGMEM = {
-    { { 0x00, 0x11, 0x00 },  50, 0 }, // 0  red
-    { { 0xdd, 0x11, 0x00 },  50, 0 }, // 1  yellow
-    { { 0x11, 0x00, 0x11 },  50, 0 }, // 1  greenblue
+    { { 0x33, 0x00, 0x00 }, 100, 0 }, // 0  red
+    { { 0x33, 0x55, 0x00 },  50, 0 }, // 1  yellow
+    { { 0x00, 0x33, 0x33 },  50, 0 }, // 1  greenblue
 };
 
 const patternline_t* const patterns[] PROGMEM = {
     patternlines_default,
+    patternlines_rgb,
+    patternlines_blink_white,
+    patternlines_stoplight,
 };
-//   &patternlines_rgb,
-//   &patternlines_blink_white,
-//   &patternlines_stoplight,
 
 // this is so lame, but can't create a flexible array of patternlines in a struct
 const int pattern_lens[] PROGMEM = {
