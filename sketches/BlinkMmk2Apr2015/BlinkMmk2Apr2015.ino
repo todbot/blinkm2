@@ -59,6 +59,7 @@ uint8_t  ee_unused2          EEMEM = 0xDA;
 patternline_t patternlines_ee[patt_max] EEMEM;
 
 byte cmd;
+byte cmdargs[8];
 
 uint8_t script_id;
 uint8_t playpos   = 0; // current play position
@@ -131,14 +132,14 @@ void loop()
 // 
 // => overlay_inc = 65536 * led_update_millis / fade_millis 
 //
-void calculate_overlay_inc()
+static void calculate_overlay_inc()
 {
   //overlay_inc = ((uint32_t)65536 * led_update_millis) / fade_millis;
   overlay_inc = ((uint16_t)256 * led_update_millis) / fade_millis;
 }
 
 //
-void play_script()
+static void play_script()
 {
   if( script_id == 0 ) {
     playend = 5;  // FIXME:
@@ -158,7 +159,7 @@ void play_script()
 
 
 //
-void get_next_patternline()
+static void get_next_patternline()
 {
   if( script_id == 0 ) { // eeprom
     eeprom_read_block(&pltmp, &patternlines_ee[playpos],sizeof(patternline_t));
@@ -188,7 +189,7 @@ void get_next_patternline()
 }
 
 //
-void update_leds()
+static void update_leds()
 {
   if( overlay_amount < 250 ) { // 97.6% arbitrary
     ctmp = blend( curr, dest, (overlay_amount) );
@@ -215,7 +216,7 @@ void update_leds()
 // - controls sequencing of a light pattern, if playing
 // - ///triggers pattern playing on USB disconnect
 //
-void update_led_state()
+static void update_led_state()
 {
     uint32_t now = millis();
     
@@ -234,7 +235,6 @@ void update_led_state()
         
         get_next_patternline();
         
-        
         // prepare to go to next line
         playpos++;
         if( playpos == playend ) {
@@ -252,20 +252,29 @@ void update_led_state()
     
 }
 
+//
+static void read_i2c_vals(uint8_t num, uint8_t*buf)
+{
+  for( uint8_t i=0; i<num; i++)
+    buf[i] = TinyWireS.receive();
+
+}
+
+static void handle_script_cmd()
+{
+
+}
 
 //
-void check_i2c()
+static void check_i2c()
 {
 
   if( TinyWireS.available() ) { 
     cmd = TinyWireS.receive();    // first byte is command
     if( cmd == 'c' ) {
-      dest.r = TinyWireS.receive();
-      dest.g = TinyWireS.receive();
-      dest.b = TinyWireS.receive();
+      read_i2c_vals( 3, (uint8_t*)&dest );
       overlay_amount = 0;
       calculate_overlay_inc();
-      
     }
     else if( cmd == 'n' ) {  // "fade to color" & "set color now" cmds
       curr.r = TinyWireS.receive();
@@ -277,6 +286,7 @@ void check_i2c()
       
     }
     else if( cmd=='f' ) {
+      
     }
     else if( cmd == 'C' ) { // "random rgb color" cmd
       byte dr = TinyWireS.receive();

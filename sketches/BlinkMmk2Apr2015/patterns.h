@@ -5,6 +5,7 @@
 #include "led_utils.h"  // for CRGB
 
 struct patternline_t {
+    uint8_t cmd;
     CRGB color;
     uint16_t dmillis; // hundreths of a sec
     uint8_t ledn;     // number of led, or 0 for all
@@ -12,28 +13,28 @@ struct patternline_t {
 
 
 const patternline_t patternlines_default[] PROGMEM = {
-    { { 0x7f, 0x7f, 0x7f },  100, 0 }, // 13 white B
-    { { 0x22, 0x00, 0x00 },  100, 0 }, // 0  red A
-    { { 0x00, 0x22, 0x00 },  100, 0 }, // 4  grn A
-    { { 0x00, 0x00, 0x22 },  100, 0 }, // 6  blu A
-    { { 0x00, 0x00, 0x00 },  100, 0 }, // 14 off B
+    { 'c', { 0x7f, 0x7f, 0x7f },  100, 0 }, // 13 white B
+    { 'c', { 0x22, 0x00, 0x00 },  100, 0 }, // 0  red A
+    { 'c', { 0x00, 0x22, 0x00 },  100, 0 }, // 4  grn A
+    { 'c', { 0x00, 0x00, 0x22 },  100, 0 }, // 6  blu A
+    { 'c', { 0x00, 0x00, 0x00 },  100, 0 }, // 14 off B
 };
 
 const patternline_t patternlines_rgb[] PROGMEM = {
-    { { 0x33, 0x00, 0x00 },  100, 0 }, // 0  red all
-    { { 0x00, 0x33, 0x00 },  100, 0 }, // 1  grn all
-    { { 0x00, 0x00, 0x33 },  100, 0 }, // 2  blu all
+    { 'c', { 0x33, 0x00, 0x00 },  100, 0 }, // 0  red all
+    { 'c', { 0x00, 0x33, 0x00 },  100, 0 }, // 1  grn all
+    { 'c', { 0x00, 0x00, 0x33 },  100, 0 }, // 2  blu all
 };
 
 const patternline_t patternlines_blink_white[] PROGMEM = {
-    { { 0x11, 0x11, 0x11 },  50, 0 }, // 0  white all
-    { { 0x00, 0x00, 0x00 },  50, 0 }, // 1  off all
+    { 'c', { 0x11, 0x11, 0x11 },  50, 0 }, // 0  white all
+    { 'c', { 0x00, 0x00, 0x00 },  50, 0 }, // 1  off all
 };
 
 const patternline_t patternlines_stoplight[] PROGMEM = {
-    { { 0x33, 0x00, 0x00 }, 100, 0 }, // 0  red
-    { { 0x33, 0x55, 0x00 },  50, 0 }, // 1  yellow
-    { { 0x00, 0x33, 0x33 },  50, 0 }, // 1  greenblue
+    { 'c', { 0x33, 0x00, 0x00 }, 100, 0 }, // 0  red
+    { 'c', { 0x33, 0x55, 0x00 },  50, 0 }, // 1  yellow
+    { 'c', { 0x00, 0x33, 0x33 },  50, 0 }, // 1  greenblue
 };
 
 const patternline_t* const patterns[] PROGMEM = {
