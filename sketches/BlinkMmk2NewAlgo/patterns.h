@@ -2,16 +2,19 @@
 #ifndef PATTERNS_H
 #define PATTERNS_H
 
-#include "led_utils.h"  // for CRGB
+//#include "led_utils.h"  // for CRGB
+#include "led_fader.h"  // for rgb_t
 
 struct patternline_t {
     uint8_t cmd;
-    CRGB color;
+    rgb_t color;
     uint16_t dmillis; // hundreths of a sec
     uint8_t ledn;     // number of led, or 0 for all
 };
 
-#define rgb(ar,ag,ab) { .r=ar, .g=ag, .b=ab }
+// doesn't work on avr-gcc 4.8?
+//#define rgb(ar,ag,ab) { .r=ar, .g=ag, .b=ab }
+#define rgb(ar,ag,ab) { ag, ar, ab }
 
 const patternline_t patternlines_default[] PROGMEM = {
     { 'c', rgb( 0x7f, 0x7f, 0x7f ),  100, 0 }, // 13 white B
