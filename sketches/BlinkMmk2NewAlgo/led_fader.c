@@ -50,41 +50,12 @@ bool led_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount )
 // to complete range in fade_millis
 // compute the fractional amount the fader will move for each (1 or 10) msec tick
 //
-uint16_t led_compute_faderposinc( uint8_t millistep, uint16_t fade_millis )
+inline uint16_t led_compute_faderposinc( uint8_t millistep, uint16_t fade_millis )
 {
-    uint16_t bf = ((uint16_t)65535 * millistep ) / fade_millis;
+    uint16_t bf = ((uint32_t)65535 * millistep ) / fade_millis;
     return bf;
 }
 
-//
-// Set the destination color for a set of LEDs
-// @param new new led color
-// @param dmillis time to fade to new color in "deci-millis"  (10msec ticks)
-//
-void led_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
-{
-    uint8_t st = ledn;
-    uint8_t end = ledn+1;
-    // ledn==0 means all leds
-    if( ledn==0 ) {  st = 0; end = NUM_LEDS; }
-
-    uint8_t i;
-    for( i = st; i< end; i++ ) {
-        rgb_t* curc = &leds[i];
-        fader_t* f = &faders[i];
-        // reset fader position & inc amount
-        f->faderpos = 0;
-        f->faderposinc = led_compute_faderposinc( led_update_millis, dmillis );
-        // make current color the new start color
-        f->last.r = curc->r;
-        f->last.g = curc->g;
-        f->last.b = curc->b;
-        // make new color the new destination
-        f->dest.r = newc->r;
-        f->dest.g = newc->g;
-        f->dest.b = newc->b;
-    }
-}
 
 //
 // Update all the faders, update the current state of all LEDs
@@ -94,6 +65,7 @@ void led_update_faders()
 {
     uint8_t i;
     for( i=0; i< NUM_LEDS; i++ ) {
+        //dbgln("led:");
         rgb_t* cur   = &leds[i];
         rgb_t* start = &(faders[i].last);
         rgb_t* end   = &(faders[i].dest);

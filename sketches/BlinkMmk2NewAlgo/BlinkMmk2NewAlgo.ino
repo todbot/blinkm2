@@ -29,14 +29,6 @@
 //                           +----+
 */
 
-#if defined(__AVR_ATtiny85__) || defined(__AVR_ATtiny84__)  //
-#define __BLINKM_BOARD__
-#define dbg(x)
-#define dbgln(x)
-#else
-#define dbg(x) Serial.print(x)
-#define dbgln(x) Serial.println(x)
-#endif
 
 #if defined(__BLINKM_BOARD__)
 //#include "TinyWireS.h" // must comment out when in UNO debug
@@ -116,110 +108,152 @@ uint8_t ntmp;    // temp ledn holder
 
 rgb_t ctmp;  // temp color holdor
 
-
 uint32_t led_update_next;
 uint32_t pattern_update_next;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
+// we need an leds array, so pull it from neopixel library
 rgb_t* leds = (rgb_t*)strip.getPixels(); 
 fader_t faders[NUM_LEDS];
 
 
 uint8_t ledtoggle;  // temp debug
 
-void play_script();
-void get_next_patternline();
-void update_led_state();
-void check_i2c();
-void handle_script_cmd();
+static void play_script();
+static void get_next_patternline();
+static void update_led_state();
+static void check_i2c();
+static void handle_script_cmd();
 
 //
 void setup()
 {
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
-  strip.setBrightness(128);
-
+    strip.begin();
+    strip.show(); // Initialize all pixels to 'off'
+    strip.setBrightness(128);
+    
 #if defined(__BLINKM_BOARD__)
-  TinyWireS.begin(I2C_ADDR);
+    TinyWireS.begin(I2C_ADDR);
 #else
-  Wire.begin(I2C_ADDR);
-  Serial.begin(115200);
-  dbgln("BlinkMmk2Demo!");
+    Wire.begin(I2C_ADDR);
+    Serial.begin(115200);
+    dbgln("BlinkMmk2NewAlgo!");
 #endif
-  
-  // load up EEPROM from flash, 
-  // to deal with fact that Arduino uploader doesn't upload EEPROM
-  for( uint8_t i=0; i<PATT_MAX; i++ ) {
+    /*
+    // load up EEPROM from flash, 
+    // to deal with fact that Arduino uploader doesn't upload EEPROM
+    for( uint8_t i=0; i<PATT_MAX; i++ ) {
     memcpy_P( &pltmp, &(patternlines_default[i]), sizeof(patternline_t) ); 
     eeprom_write_block( &pltmp, &(patternlines_ee[i]), sizeof(patternline_t) );
-  }
-
-  //  FIXME: check for play on boot
-  script_id = 4;
-  play_script();
-
+    }
+    */
+    //  FIXME: check for play on boot
+    script_id = 1;
+    play_script();
+    
 }
 
 //
 void loop()
 {
-  update_led_state();
-  check_i2c();
+    update_led_state();
+    check_i2c();
+}
+
+// blend between a start color and a destination color
+// by an 8-bit "fractional" amount ranging from 0-255 (0=start, 255=dest)
+// return true when at top of fader
+static bool zzled_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount )
+{
+    if( blend_amount == 0) {
+        curr->r = start->r;
+        curr->g = start->g;
+        curr->b = start->b;
+    }
+    else if( blend_amount == 255) {
+        curr->r = dest->r;
+        curr->g = dest->g;
+        curr->b = dest->b;
+        return true;
+    }
+    else {
+        fract8 keep_amount = 256 - blend_amount;
+        
+        curr->r = scale8( start->r,  keep_amount) +
+                  scale8( dest->r,   blend_amount);
+
+        curr->g = scale8( start->g,  keep_amount) +
+                  scale8( dest->g,   blend_amount);
+
+        curr->b = scale8( start->b,  keep_amount) +
+                  scale8( dest->b,   blend_amount);
+    }
+    return false;
 }
 
 
 //
-void update_leds()
+// Set the destination color for a set of LEDs
+// @param new new led color
+// @param dmillis time to fade to new color in "deci-millis"  (10msec ticks)
+//
+static void zzled_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
 {
-  
-  led_update_faders();
-  
-  /*
-  if( overlay_amount < 250 ) { // 97.6% arbitrary
-    ctmp = blend( curr, dest, overlay_amount );
-    overlay_amount += overlay_inc;
-  }
-  else {
-    ctmp = dest;
-  }
+    uint8_t st = ledn;
+    uint8_t end = ledn+1;
+    if( end > NUM_LEDS ) end = NUM_LEDS;
+    // ledn==0 means all leds
+    if( ledn==0 ) {  st = 0; end = NUM_LEDS; }
+    // FIXME: deal with ledn=1 => leds[0] case
+    
+    for( uint8_t i = st; i< end; i++ ) {
+        rgb_t* curc = &leds[i];
+        fader_t* f = &faders[i];
+        // reset fader position & inc amount
+        f->faderpos = 0;
+        f->faderposinc = ((uint32_t)65535 * 10) / dmillis ; ////zzled_compute_faderposinc( 1, dmillis );
+        if( i==0 ) { // debug
+            dbg(curc->r); dbg(curc->g); dbg(curc->g);
+            dbgln("=set");
+        }
+        // make current color the new start color
+        f->last.r = curc->r;
+        f->last.g = curc->g;
+        f->last.b = curc->b;
+        // make new color the new destination
+        f->dest.r = newc->r;
+        f->dest.g = newc->g;
+        f->dest.b = newc->b;
+    }
+}
 
-  uint8_t m = ntmp;
-  if( m >= 64 )  {
-    m -= 64;
-    uint8_t st = 0;
-    for( uint8_t i = 0; i< NUM_LEDS; i++ ) {
-      st = get_led_state( m, i, st );
-      if( st ) strip.setPixelColor( i, ctmp.r, ctmp.g, ctmp.b );
+//
+// normally lives in led_fader.c, but can't use dbg() there
+//
+static void zzled_update_faders()
+{
+    uint8_t i;
+    for( i=0; i< NUM_LEDS; i++ ) {
+      //dbgln("led:");
+        rgb_t* curc  = &leds[i];
+        rgb_t* start = &(faders[i].last);
+        rgb_t* end   = &(faders[i].dest);
+        uint8_t faderpos = faders[i].faderpos/256;
+        if( i==0 ) { // debug
+            dbg(curc->r); dbg(','); dbg(curc->g); dbg(','); dbg(curc->g);
+            dbgln(" = cur");
+        }
+        
+        bool donefading = zzled_blend( curc, start, end, faderpos );  // do next increment of fade
+        if( !donefading ) 
+            faders[i].faderpos += faders[i].faderposinc;
+        else {
+            curc->r = end->r;
+            curc->g = end->g;
+            curc->b = end->b;
+        }
     }
-  }
-  else if( m == 0 ) {
-    for( uint8_t i = 0; i< NUM_LEDS; i++ ) {
-      strip.setPixelColor( i, ctmp.r, ctmp.g, ctmp.b );
-    }
-  }
-  else {
-    strip.setPixelColor( m, ctmp.r, ctmp.g, ctmp.b );
-    dests[m] = ctmp;
-  }
-  */
-  
-  /*
-  if( ntmp == 0 ) {          // set all LEDs to same color
-    for( uint8_t i=0; i< NUM_LEDS; i++) {
-      strip.setPixelColor( i, ctmp.r, ctmp.g, ctmp.b );
-    }
-  } else if( ntmp < 128 ) {  // set a single LED
-    strip.setPixelColor( ntmp, ctmp.r, ctmp.g, ctmp.b );
-  } else {                   // set a range, 6-bits = start, 2-bits = range
-    uint8_t start = ntmp & 0b;
-    uint8_t len   = (ntmp >> 4);
-    strip.setPixelColor( ntmp, ctmp.r, ctmp.g, ctmp.b );
-  }
-  */
-  strip.show();
-
 }
 
 
@@ -229,15 +263,17 @@ void update_leds()
 // - controls sequencing of a light pattern, if playing
 // - ///triggers pattern playing on USB disconnect
 //
-void update_led_state()
+static void update_led_state()
 {
     now = millis();
     
     // update LEDs every led_update_millis
     if( (long)(now - led_update_next) > 0 ) {
       led_update_next += led_update_millis;
-      
-      update_leds();
+      //update_leds();
+      //dbgln("update_leds");
+      zzled_update_faders();
+      strip.show();
       
     } // led_update_next
 
@@ -286,147 +322,194 @@ void update_led_state()
 */
 
 //
-void play_script()
+static void play_script()
 {
-  if( script_id == 0 ) {
-    playend = 5;  // FIXME:
-    playcount = 0;  // FIXME: infinite
-  }
-  else { 
-    playend = pgm_read_byte( &pattern_lens[script_id] ); 
-    playcount = 0;
-  }
-  
-  playpos = 0;
-  playing = 1;
-
-  get_next_patternline();
+    if( script_id == 0 ) {
+        playend = 5;  // FIXME:
+        playcount = 0;  // FIXME: infinite
+    }
+    else { 
+        playend = pgm_read_byte( &pattern_lens[script_id] ); 
+        playcount = 0;
+    }
+    
+    playpos = 0;
+    playing = 1;
+    
+    get_next_patternline();
 }
 
 //
-void get_next_patternline()
+static void get_next_patternline()
 {
-  if( script_id == 0 ) { // eeprom
-    eeprom_read_block(&pltmp, &patternlines_ee[playpos],sizeof(patternline_t));
-  } else {
-    patternline_t* p;
-    memcpy_P( &p, &patterns[script_id], sizeof(patternline_t*) ); // read in start addr of patternline set
-    memcpy_P(&pltmp, &p[playpos], sizeof(patternline_t));  // read in patternline
-  }
-  cmd  = pltmp.cmd;
-  //ctmp = pltmp.color;
-  ctmp.r = pltmp.color.r; ctmp.g = pltmp.color.g; ctmp.b = pltmp.color.b;
-  ttmp = pltmp.dmillis * 10;
-  ntmp = pltmp.ledn;
-  
-  if( ttmp == 0 && ctmp.r==0 && ctmp.g==0 && ctmp.b==0 ) {
-    // skip lines set to zero
-  }
-  else {
-    handle_script_cmd();
-  }
+    if( script_id == 0 ) { // eeprom
+        eeprom_read_block(&pltmp, &patternlines_ee[playpos],sizeof(patternline_t));
+    } else {
+        patternline_t* p;
+        memcpy_P( &p, &patterns[script_id], sizeof(patternline_t*) ); // read in start addr of patternline set
+        memcpy_P(&pltmp, &p[playpos], sizeof(patternline_t));  // read in patternline
+    }
+    cmd  = pltmp.cmd;
+    //ctmp = pltmp.color;
+    ctmp.r = pltmp.color.r; ctmp.g = pltmp.color.g; ctmp.b = pltmp.color.b;
+    ttmp = pltmp.dmillis * 10;
+    ntmp = pltmp.ledn;
+    
+    if( ttmp == 0 && ctmp.r==0 && ctmp.g==0 && ctmp.b==0 ) {
+        // skip lines set to zero
+    }
+    else {
+        handle_script_cmd();
+    }
 }
 
 
 //
- void handle_script_cmd()
+static void handle_script_cmd()
 {
-  dbg("handle_script_cmd:"); dbg((char)cmd);
-  if( cmd == 'n' ) {
-    //dest = ctmp;
-    //curr = ctmp;
-  }
-  else if( cmd == 'c' ) { 
-    //curr = dest;
-    //dest = ctmp;
-    fade_millis = ttmp / 2;      //fade_millis = ttmp;
-    led_set_dest( &ctmp, fade_millis, ntmp );
-    //calculate_overlay_inc();
-  }
-  else if( cmd == 'C' ) {
-      byte dr = cmdargs[0];
-      byte dg = cmdargs[1];
-      byte db = cmdargs[2];
-      //curr.r = curr.r + (random8() % dr ) - (dr/2);  // random around previsous color
-      //curr.g = curr.g + (random8() % dg ) - (dg/2);
-      //curr.b = curr.b + (random8() % db ) - (db/2);
-      //dest = curr;
-  }
-  else if( cmd == 'h' ) {
-    //curr = dest;
-    //hsv2rgb_rainbow( (const CHSV&)(ctmp), dest ); // FIXME: test
-    //dbg("h:"); dbg(cmdargs[0]); dbg("r:"); dbg(dest.r);
-    fade_millis = ttmp / 2;
-    //calculate_overlay_inc();
-  }
-  else if( cmd == 'H' ) {
-  }
-  else if( cmd == 'p' ) {
-  }
-  else if( cmd == 'f' ) {
-  }
-  else if( cmd == 't' ) {
-  }
-  else if( cmd == 'F' ) {
-  }
-  else if( cmd == 'j' ) {
-  }
-  else if( cmd == 'i' ) {
-  }
-  else if( cmd == 'I' ) {
-  }
-  else if( cmd == 'k' ) {
-  }
-  else if( cmd == 'K' ) {
-  }
-
+    dbg("handle_script_cmd:"); dbg((char)cmd);
+    if( cmd == 'n' ) {
+        //dest = ctmp;
+        //curr = ctmp;
+    }
+    else if( cmd == 'c' ) { 
+        //curr = dest;
+        //dest = ctmp;
+        fade_millis = ttmp / 2;    // fading only half the time, at color other half
+        zzled_set_dest( &ctmp, fade_millis, ntmp );
+        //calculate_overlay_inc();
+    }
+    else if( cmd == 'C' ) {
+        byte dr = cmdargs[0];
+        byte dg = cmdargs[1];
+        byte db = cmdargs[2];
+        //curr.r = curr.r + (random8() % dr ) - (dr/2);  // random around previsous color
+        //curr.g = curr.g + (random8() % dg ) - (dg/2);
+        //curr.b = curr.b + (random8() % db ) - (db/2);
+        //dest = curr;
+    }
+    else if( cmd == 'h' ) {
+        //curr = dest;
+        //hsv2rgb_rainbow( (const CHSV&)(ctmp), dest ); // FIXME: test
+        //dbg("h:"); dbg(cmdargs[0]); dbg("r:"); dbg(dest.r);
+        fade_millis = ttmp / 2;
+        zzled_set_dest( &ctmp, fade_millis, ntmp );
+        //calculate_overlay_inc();
+    }
+    else if( cmd == 'H' ) {
+    }
+    else if( cmd == 'p' ) {
+    }
+    else if( cmd == 'f' ) {
+    }
+    else if( cmd == 't' ) {
+    }
+    else if( cmd == 'F' ) {
+    }
+    else if( cmd == 'j' ) {
+    }
+    else if( cmd == 'i' ) {
+    }
+    else if( cmd == 'I' ) {
+    }
+    else if( cmd == 'k' ) {
+    }
+    else if( cmd == 'K' ) {
+    }
+    
 }
 
 // --------------------------------------------------------
 
 //
- void read_i2c_vals(uint8_t num, uint8_t*buf)
+static void read_i2c_vals(uint8_t num, uint8_t*buf)
 {
 #if defined(__BLINKM_BOARD__)
-  for( uint8_t i=0; i<num; i++)
-    buf[i] = TinyWireS.receive();
+    for( uint8_t i=0; i<num; i++)
+        buf[i] = TinyWireS.receive();
 #else
-  for( uint8_t i=0; i<num; i++)
-    buf[i] = Wire.read();
+    for( uint8_t i=0; i<num; i++)
+        buf[i] = Wire.read();
 #endif
 }
 
 //
- void check_i2c()
+static void check_i2c()
 {
 #if defined(__BLINKM_BOARD__)
-  if( TinyWireS.available() ) { 
-    cmd = TinyWireS.receive();    // first byte is command
+    if( TinyWireS.available() ) { 
+        cmd = TinyWireS.receive();    // first byte is command
 #else
-  if( Wire.available() ) { 
-    cmd = Wire.read();    // first byte is command
+    if( Wire.available() ) { 
+        cmd = Wire.read();    // first byte is command
 #endif
-    
-    if( cmd == 'n' ||
-        cmd == 'c' ||
-        cmd == 'C' ||
-        cmd == 'h' ||
-        cmd == 'H' ||
-        cmd == 'p' ) {
-      read_i2c_vals( 3, cmdargs );
-      handle_script_cmd();
-    }
-    else if( cmd == 'f' ) {
-      
-    }
-    // else if( cmd == 'h' ) { // "fade to HSB color" cmd
-    //}
-    else {
-      // unknown cmd
-    }
-
-  }
+            
+        if( cmd == 'n' ||
+            cmd == 'c' ||
+            cmd == 'C' ||
+            cmd == 'h' ||
+            cmd == 'H' ||
+            cmd == 'p' ) {
+            read_i2c_vals( 3, cmdargs );
+            handle_script_cmd();
+        }
+        else if( cmd == 'f' ) {
+            
+        }
+        // else if( cmd == 'h' ) { // "fade to HSB color" cmd
+        //}
+        else {
+            // unknown cmd
+        }
+        
+    } // if available
 }
+    
+    
+ 
+  /*
+  if( overlay_amount < 250 ) { // 97.6% arbitrary
+    ctmp = blend( curr, dest, overlay_amount );
+    overlay_amount += overlay_inc;
+  }
+  else {
+    ctmp = dest;
+  }
+
+  uint8_t m = ntmp;
+  if( m >= 64 )  {
+    m -= 64;
+    uint8_t st = 0;
+    for( uint8_t i = 0; i< NUM_LEDS; i++ ) {
+      st = get_led_state( m, i, st );
+      if( st ) strip.setPixelColor( i, ctmp.r, ctmp.g, ctmp.b );
+    }
+  }
+  else if( m == 0 ) {
+    for( uint8_t i = 0; i< NUM_LEDS; i++ ) {
+      strip.setPixelColor( i, ctmp.r, ctmp.g, ctmp.b );
+    }
+  }
+  else {
+    strip.setPixelColor( m, ctmp.r, ctmp.g, ctmp.b );
+    dests[m] = ctmp;
+  }
+  */
+  
+  /*
+  if( ntmp == 0 ) {          // set all LEDs to same color
+    for( uint8_t i=0; i< NUM_LEDS; i++) {
+      strip.setPixelColor( i, ctmp.r, ctmp.g, ctmp.b );
+    }
+  } else if( ntmp < 128 ) {  // set a single LED
+    strip.setPixelColor( ntmp, ctmp.r, ctmp.g, ctmp.b );
+  } else {                   // set a range, 6-bits = start, 2-bits = range
+    uint8_t start = ntmp & 0b;
+    uint8_t len   = (ntmp >> 4);
+    strip.setPixelColor( ntmp, ctmp.r, ctmp.g, ctmp.b );
+  }
+  */
+
 
   // m = led pattern
 // i = which led to use

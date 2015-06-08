@@ -14,6 +14,7 @@ struct patternline_t {
 
 // doesn't work on avr-gcc 4.8?
 //#define rgb(ar,ag,ab) { .r=ar, .g=ag, .b=ab }
+// note: order is g,r,b
 #define rgb(ar,ag,ab) { ag, ar, ab }
 
 const patternline_t patternlines_default[] PROGMEM = {
@@ -25,9 +26,9 @@ const patternline_t patternlines_default[] PROGMEM = {
 };
 
 const patternline_t patternlines_rgb[] PROGMEM = {
-    { 'c', rgb( 0x33, 0x00, 0x00 ),  100, 0 }, // 0  red all
-    { 'c', rgb( 0x00, 0x33, 0x00 ),  100, 0 }, // 1  grn all
-    { 'c', rgb( 0x00, 0x00, 0x33 ),  100, 0 }, // 2  blu all
+    { 'c', rgb( 0x33, 0x00, 0x00 ),  200, 0 }, // 0  red all
+    { 'c', rgb( 0x00, 0x33, 0x00 ),  200, 0 }, // 1  grn all
+    { 'c', rgb( 0x00, 0x00, 0x33 ),  200, 0 }, // 2  blu all
 };
 
 const patternline_t patternlines_blink_white[] PROGMEM = {
