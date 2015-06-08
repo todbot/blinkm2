@@ -2,8 +2,7 @@
 #ifndef PATTERNS_H
 #define PATTERNS_H
 
-//#include "led_utils.h"  // for CRGB
-#include "led_fader.h"  // for rgb_t
+#include "led_fader_types.h"  // for rgb_t
 
 struct patternline_t {
     uint8_t cmd;
@@ -30,6 +29,14 @@ const patternline_t patternlines_rgb[] PROGMEM = {
     { 'c', rgb( 0x00, 0x33, 0x00 ),  200, 0 }, // 1  grn all
     { 'c', rgb( 0x00, 0x00, 0x33 ),  200, 0 }, // 2  blu all
 };
+const patternline_t patternlines_rgbmulti[] PROGMEM = {
+    { 'c', rgb( 0x33, 0x00, 0x00 ),  200, 1 }, // 0  red all
+    { 'c', rgb( 0x00, 0x33, 0x00 ),  200, 1 }, // 1  grn all
+    { 'c', rgb( 0x00, 0x00, 0x33 ),  200, 1 }, // 2  blu all
+    { 'c', rgb( 0x33, 0x00, 0x00 ),  200, 2 }, // 0  red all
+    { 'c', rgb( 0x00, 0x33, 0x00 ),  200, 2 }, // 1  grn all
+    { 'c', rgb( 0x00, 0x00, 0x33 ),  200, 2 }, // 2  blu all
+};
 
 const patternline_t patternlines_blink_white[] PROGMEM = {
     { 'c', rgb( 0x11, 0x11, 0x11 ),  50, 0 }, // 0  white all
@@ -55,6 +62,7 @@ const patternline_t* const patterns[] PROGMEM = {
     patternlines_blink_white,
     patternlines_stoplight,
     patternlines_hues,
+    patternlines_rgbmulti,
 };
 
 // this is so lame, but can't create a flexible array of patternlines in a struct
@@ -64,6 +72,7 @@ const int pattern_lens[] PROGMEM = {
     2,
     3,
     4,
+    6,
 };
 
 

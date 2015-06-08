@@ -30,6 +30,10 @@
 */
 
 
+// configuration for multple boards and debug helpers
+#include "config.h"
+
+// note: Arduino IDE doesn't parse correctly inside ifdefs
 #if defined(__BLINKM_BOARD__)
 //#include "TinyWireS.h" // must comment out when in UNO debug
 #else
@@ -38,40 +42,10 @@
 
 #include <Adafruit_NeoPixel.h>
 
-#include "config.h"
-#include "led_fader.h"
-#include "patterns.h"  // the light sequence patterns
+#include "led_fader_types.h"
 
-
-
-#if defined(__AVR_ATtiny85__)
-// BlinkM pins
-const int redPin = 3;  // 
-const int grnPin = 4;  //
-const int bluPin = 1;  // PWM, will blink when programming
-const int sdaPin = 0;  // PWM, 'd' pin, can be digital I/O
-const int sclPin = 2;  // A/D, 'c' pin, can be digital I/O, or analog input
-const int LED_PIN = bluPin;
-#elif defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny44__)
-// BlinkM MaxM pins 
-const int redPin = 8;   // PB2 OC0A
-const int grnPin = 7;   // PA7 OC0B
-const int bluPin = 5;   // PA5 OC1B 'i' pin
-const int sdaPin = 6;   // PA6 
-const int sclPin = 9;   // PA4
-const int in0Pin = A0;  // PA0
-const int in1Pin = A1;  // PA1
-const int in2Pin = A2;  // PA2
-const int in3Pin = A3;  // PA3
-const int LED_PIN = redPin;
-#else
-#warning "unknown board type, assuming UNO"
-const int redPin = 9;
-const int grnPin = 10;
-const int bluPin = 11;
-const int LED_PIN = 6;
-#endif
-
+// light sequence patterns, needs struct from led_fader_funcs.h
+#include "patterns.h"
 
 
 // eeprom begin: muncha buncha eeprom
@@ -118,13 +92,17 @@ rgb_t* leds = (rgb_t*)strip.getPixels();
 fader_t faders[NUM_LEDS];
 
 
+// note: we have funcs in header file because of Arduino compile limitations
+#include "led_fader_funcs.h"
+
+
 uint8_t ledtoggle;  // temp debug
 
-static void play_script();
-static void get_next_patternline();
-static void update_led_state();
-static void check_i2c();
-static void handle_script_cmd();
+void play_script();
+void get_next_patternline();
+void update_led_state();
+void check_i2c();
+void handle_script_cmd();
 
 //
 void setup()
@@ -140,16 +118,18 @@ void setup()
     Serial.begin(115200);
     dbgln("BlinkMmk2NewAlgo!");
 #endif
-    /*
+
+#if 0
     // load up EEPROM from flash, 
     // to deal with fact that Arduino uploader doesn't upload EEPROM
     for( uint8_t i=0; i<PATT_MAX; i++ ) {
     memcpy_P( &pltmp, &(patternlines_default[i]), sizeof(patternline_t) ); 
     eeprom_write_block( &pltmp, &(patternlines_ee[i]), sizeof(patternline_t) );
     }
-    */
+#endif
+    
     //  FIXME: check for play on boot
-    script_id = 1;
+    script_id = 5;
     play_script();
     
 }
@@ -161,101 +141,6 @@ void loop()
     check_i2c();
 }
 
-// blend between a start color and a destination color
-// by an 8-bit "fractional" amount ranging from 0-255 (0=start, 255=dest)
-// return true when at top of fader
-static bool zzled_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount )
-{
-    if( blend_amount == 0) {
-        curr->r = start->r;
-        curr->g = start->g;
-        curr->b = start->b;
-    }
-    else if( blend_amount == 255) {
-        curr->r = dest->r;
-        curr->g = dest->g;
-        curr->b = dest->b;
-        return true;
-    }
-    else {
-        fract8 keep_amount = 256 - blend_amount;
-        
-        curr->r = scale8( start->r,  keep_amount) +
-                  scale8( dest->r,   blend_amount);
-
-        curr->g = scale8( start->g,  keep_amount) +
-                  scale8( dest->g,   blend_amount);
-
-        curr->b = scale8( start->b,  keep_amount) +
-                  scale8( dest->b,   blend_amount);
-    }
-    return false;
-}
-
-
-//
-// Set the destination color for a set of LEDs
-// @param new new led color
-// @param dmillis time to fade to new color in "deci-millis"  (10msec ticks)
-//
-static void zzled_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
-{
-    uint8_t st = ledn;
-    uint8_t end = ledn+1;
-    if( end > NUM_LEDS ) end = NUM_LEDS;
-    // ledn==0 means all leds
-    if( ledn==0 ) {  st = 0; end = NUM_LEDS; }
-    // FIXME: deal with ledn=1 => leds[0] case
-    
-    for( uint8_t i = st; i< end; i++ ) {
-        rgb_t* curc = &leds[i];
-        fader_t* f = &faders[i];
-        // reset fader position & inc amount
-        f->faderpos = 0;
-        f->faderposinc = ((uint32_t)65535 * 10) / dmillis ; ////zzled_compute_faderposinc( 1, dmillis );
-        if( i==0 ) { // debug
-            dbg(curc->r); dbg(curc->g); dbg(curc->g);
-            dbgln("=set");
-        }
-        // make current color the new start color
-        f->last.r = curc->r;
-        f->last.g = curc->g;
-        f->last.b = curc->b;
-        // make new color the new destination
-        f->dest.r = newc->r;
-        f->dest.g = newc->g;
-        f->dest.b = newc->b;
-    }
-}
-
-//
-// normally lives in led_fader.c, but can't use dbg() there
-//
-static void zzled_update_faders()
-{
-    uint8_t i;
-    for( i=0; i< NUM_LEDS; i++ ) {
-      //dbgln("led:");
-        rgb_t* curc  = &leds[i];
-        rgb_t* start = &(faders[i].last);
-        rgb_t* end   = &(faders[i].dest);
-        uint8_t faderpos = faders[i].faderpos/256;
-        if( i==0 ) { // debug
-            dbg(curc->r); dbg(','); dbg(curc->g); dbg(','); dbg(curc->g);
-            dbgln(" = cur");
-        }
-        
-        bool donefading = zzled_blend( curc, start, end, faderpos );  // do next increment of fade
-        if( !donefading ) 
-            faders[i].faderpos += faders[i].faderposinc;
-        else {
-            curc->r = end->r;
-            curc->g = end->g;
-            curc->b = end->b;
-        }
-    }
-}
-
 
 //
 // updateLEDState() is the main user-land function that:
@@ -263,16 +148,14 @@ static void zzled_update_faders()
 // - controls sequencing of a light pattern, if playing
 // - ///triggers pattern playing on USB disconnect
 //
-static void update_led_state()
+void update_led_state()
 {
     now = millis();
     
     // update LEDs every led_update_millis
     if( (long)(now - led_update_next) > 0 ) {
       led_update_next += led_update_millis;
-      //update_leds();
-      //dbgln("update_leds");
-      zzled_update_faders();
+      led_update_faders();
       strip.show();
       
     } // led_update_next
@@ -301,28 +184,9 @@ static void update_led_state()
     
 }
 
-/*
-// compute the overlay_inc
-// this is the amount overlay_amount is incremented every led_update_millis
-//
-// (led_update_millis / fade_millis) = fractional amount to do every tick
-// e.g. (10 / 500) = 0.02; (10 / 1000) = 0.01
-//
-// (led_update_millis / fade_millis) * 256  = fract8 amount to add to overlay
-// (led_update_millis / fade_millis) * 65536  = fract16 amount to add to overlay
-// 
-// => overlay_inc = 65536 * led_update_millis / fade_millis 
-//
- void calculate_overlay_inc()
-{
-  overlay_amount = 0;
-  //overlay_inc = ((uint32_t)65536 * led_update_millis) / fade_millis;
-  overlay_inc = ((uint16_t)256 * led_update_millis) / fade_millis;
-}
-*/
 
 //
-static void play_script()
+void play_script()
 {
     if( script_id == 0 ) {
         playend = 5;  // FIXME:
@@ -340,7 +204,7 @@ static void play_script()
 }
 
 //
-static void get_next_patternline()
+void get_next_patternline()
 {
     if( script_id == 0 ) { // eeprom
         eeprom_read_block(&pltmp, &patternlines_ee[playpos],sizeof(patternline_t));
@@ -365,7 +229,7 @@ static void get_next_patternline()
 
 
 //
-static void handle_script_cmd()
+void handle_script_cmd()
 {
     dbg("handle_script_cmd:"); dbg((char)cmd);
     if( cmd == 'n' ) {
@@ -376,7 +240,7 @@ static void handle_script_cmd()
         //curr = dest;
         //dest = ctmp;
         fade_millis = ttmp / 2;    // fading only half the time, at color other half
-        zzled_set_dest( &ctmp, fade_millis, ntmp );
+        led_set_dest( &ctmp, fade_millis, ntmp );
         //calculate_overlay_inc();
     }
     else if( cmd == 'C' ) {
@@ -393,7 +257,7 @@ static void handle_script_cmd()
         //hsv2rgb_rainbow( (const CHSV&)(ctmp), dest ); // FIXME: test
         //dbg("h:"); dbg(cmdargs[0]); dbg("r:"); dbg(dest.r);
         fade_millis = ttmp / 2;
-        zzled_set_dest( &ctmp, fade_millis, ntmp );
+        led_set_dest( &ctmp, fade_millis, ntmp );
         //calculate_overlay_inc();
     }
     else if( cmd == 'H' ) {
@@ -422,7 +286,7 @@ static void handle_script_cmd()
 // --------------------------------------------------------
 
 //
-static void read_i2c_vals(uint8_t num, uint8_t*buf)
+void read_i2c_vals(uint8_t num, uint8_t*buf)
 {
 #if defined(__BLINKM_BOARD__)
     for( uint8_t i=0; i<num; i++)
@@ -434,7 +298,7 @@ static void read_i2c_vals(uint8_t num, uint8_t*buf)
 }
 
 //
-static void check_i2c()
+void check_i2c()
 {
 #if defined(__BLINKM_BOARD__)
     if( TinyWireS.available() ) { 
@@ -617,6 +481,26 @@ int get_led_state(int m, int i, int st)
     }
     return st;
 }
+
+/*
+// compute the overlay_inc
+// this is the amount overlay_amount is incremented every led_update_millis
+//
+// (led_update_millis / fade_millis) = fractional amount to do every tick
+// e.g. (10 / 500) = 0.02; (10 / 1000) = 0.01
+//
+// (led_update_millis / fade_millis) * 256  = fract8 amount to add to overlay
+// (led_update_millis / fade_millis) * 65536  = fract16 amount to add to overlay
+// 
+// => overlay_inc = 65536 * led_update_millis / fade_millis 
+//
+ void calculate_overlay_inc()
+{
+  overlay_amount = 0;
+  //overlay_inc = ((uint32_t)65536 * led_update_millis) / fade_millis;
+  overlay_inc = ((uint16_t)256 * led_update_millis) / fade_millis;
+}
+*/
 
 /*
 //
