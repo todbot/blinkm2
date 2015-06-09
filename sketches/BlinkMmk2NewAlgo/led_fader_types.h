@@ -2,7 +2,6 @@
 #define _LED_FADER_TYPES_
 
 #include <stdint.h>
-#include <stdbool.h>
 
 //  fract8   range is 0 to 0.99609375
 //                 in steps of 0.00390625
