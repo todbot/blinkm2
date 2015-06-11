@@ -218,6 +218,7 @@ void get_next_patternline()
     ctmp.r = pltmp.color.r; ctmp.g = pltmp.color.g; ctmp.b = pltmp.color.b;
     ttmp = pltmp.dmillis * 10;
     ntmp = pltmp.ledn;
+    dbg(F("\n---line: ")); dbg(playpos); dbg(':'); dbg((char)cmd); dbg(" - "); dbgln(ntmp);
     
     if( ttmp == 0 && ctmp.r==0 && ctmp.g==0 && ctmp.b==0 ) {
         // skip lines set to zero
@@ -231,7 +232,7 @@ void get_next_patternline()
 //
 void handle_script_cmd()
 {
-    dbg("handle_script_cmd:"); dbg((char)cmd);
+    //dbg("handle_script_cmd: "); dbgln((char)cmd);
     if( cmd == 'n' ) {
         //dest = ctmp;
         //curr = ctmp;
@@ -254,7 +255,7 @@ void handle_script_cmd()
     }
     else if( cmd == 'h' ) {
         //curr = dest;
-        //hsv2rgb_rainbow( (const CHSV&)(ctmp), dest ); // FIXME: test
+        hsv2rgb_rainbow( &ctmp, &ctmp ); // FIXME: test
         //dbg("h:"); dbg(cmdargs[0]); dbg("r:"); dbg(dest.r);
         fade_millis = ttmp / 2;
         led_set_dest( &ctmp, fade_millis, ntmp );

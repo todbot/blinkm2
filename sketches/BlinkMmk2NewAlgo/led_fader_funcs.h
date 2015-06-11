@@ -29,7 +29,7 @@ int led_get_state(int m, int i, int st);
 //
 // compute the amount the fader will move ever led_update_millis
 //
-#define led_compute_faderposinc( m ) (( (uint32_t)65535 * led_update_millis) / 10)
+#define led_compute_faderposinc( m ) (( (uint32_t)65535 * led_update_millis) / (m))
 
 //
 // scale an 8-bit value by an 8-bit "percentage" (that ranges from 0-255)
@@ -81,7 +81,7 @@ bool led_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount )
 // @param dmillis time to fade to new color in "deci-millis"  (10msec ticks)
 // @param ledn, which led to change, 0==all leds
 //
-void led_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
+void led_set_dest_old( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
 {
     if( ledn > NUM_LEDS ) { ledn = NUM_LEDS;  }
     uint8_t st  = ledn;
@@ -110,6 +110,40 @@ void led_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
     }
 }
 
+void led_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
+{
+    uint8_t last_st=0;
+    for( uint8_t i = 0; i< NUM_LEDS; i++ ) {
+        // foreach LED figure out if we should update it
+        bool shouldUpdate = false;
+        if( ledn==0 || i == ledn ) // 0 == all leds
+            shouldUpdate = true;
+        else if( ledn >= 64 ) { 
+            last_st = led_get_state( ledn, i, last_st );
+            if( last_st ) shouldUpdate = true;
+        }
+        if( !shouldUpdate ) continue;
+        
+        rgb_t* curc = &leds[i];   // current led rgb value
+        fader_t* f = &faders[i];  // fader for this led
+        // reset fader position & inc amount
+        f->faderpos = 0;
+        f->faderposinc = led_compute_faderposinc( dmillis );
+        //f->faderposinc = ((uint32_t)65535 * 10) / dmillis ; ////zzled_compute_faderposinc( 1, dmillis );
+        dbg("set_dest:"); dbg(i); dbg(':');
+        dbg(curc->r); dbg(','); dbg(curc->g); dbg(','); dbg(curc->b); dbgln('.');
+
+        // make current color the new start color
+        f->last.r = curc->r;
+        f->last.g = curc->g;
+        f->last.b = curc->b;
+        // make new color the new destination
+        f->dest.r = newc->r;
+        f->dest.g = newc->g;
+        f->dest.b = newc->b;
+    }
+}
+
 //
 // Update the state of all faders and state of current LEDs
 // Should be called every led_update_millis()
@@ -124,11 +158,12 @@ void led_update_faders()
         rgb_t* start = &(faders[i].last);
         rgb_t* end   = &(faders[i].dest);
         uint8_t faderpos = faders[i].faderpos / 256;  // FIXME: document this divide
+#if 0
         if( i==0 ) { // debug
             dbg(curc->r); dbg(','); dbg(curc->g); dbg(','); dbg(curc->g);
             dbgln(" = cur");
         }
-        
+#endif   
         bool donefading = led_blend( curc, start, end, faderpos );  // do next increment of fade
         if( !donefading ) 
             faders[i].faderpos += faders[i].faderposinc;
@@ -221,9 +256,10 @@ void led_update_faders()
 // returns the state of whether the specified LED should be affected
 int led_get_state(int m, int i, int st)
 {
-    if( m < 0x40 ) {
-        return m;
-    }
+    dbg("get_state:"); dbg(m);dbg(',');dbg(i);dbg(',');dbg(st);dbgln(':');
+    //if( m < 0x40 ) {
+    //    return m;
+    //}
     m -= 0x40;
     
     if(      m < 0x20 ) {
@@ -297,6 +333,242 @@ int led_get_state(int m, int i, int st)
   }
   */
 
+// X(n+1) = (2053 * X(n)) + 13849)
+#define RAND16_2053  ((uint16_t)(2053))
+#define RAND16_13849 ((uint16_t)(13849))
+#define RAND16_SEED  1337
+uint16_t rand16seed = RAND16_SEED;
+
+//
+static uint8_t random8()
+{
+    rand16seed = (rand16seed * RAND16_2053) + RAND16_13849;
+    // return the sum of the high and low bytes, for better
+    //  mixing and non-sequential correlation
+    return (uint8_t)(((uint8_t)(rand16seed & 0xFF)) +
+                     ((uint8_t)(rand16seed >> 8)));
+}
+
+//  The "video" version of scale8 guarantees that the output will
+//  be only be zero if one or both of the inputs are zero.  If both
+//  inputs are non-zero, the output is guaranteed to be non-zero.
+//  This makes for better 'video'/LED dimming, at the cost of
+//  several additional cycles.
+static uint8_t scale8_video( uint8_t i, fract8 scale)
+{
+    uint8_t j = (((int)i * (int)scale) >> 8) + ((i&&scale)?1:0);
+    // uint8_t nonzeroscale = (scale != 0) ? 1 : 0;
+    // uint8_t j = (i == 0) ? 0 : (((int)i * (int)(scale) ) >> 8) + nonzeroscale;
+    return j;
+}
+// nscale8x3: scale three one byte values by a fourth one, which is treated as
+//         the numerator of a fraction whose demominator is 256
+//         In other words, it computes r,g,b * (scale / 256)
+//
+//         THIS FUNCTION ALWAYS MODIFIES ITS ARGUMENTS IN PLACE
+static void nscale8x3_video( uint8_t& r, uint8_t& g, uint8_t& b, fract8 scale)
+{
+    uint8_t nonzeroscale = (scale != 0) ? 1 : 0;
+    r = (r == 0) ? 0 : (((int)r * (int)(scale) ) >> 8) + nonzeroscale;
+    g = (g == 0) ? 0 : (((int)g * (int)(scale) ) >> 8) + nonzeroscale;
+    b = (b == 0) ? 0 : (((int)b * (int)(scale) ) >> 8) + nonzeroscale;
+}
+#define scale8_video_LEAVING_R1_DIRTY( i, scale) scale8_video(i,scale)
+
+// Sometimes the compiler will do clever things to reduce
+// code size that result in a net slowdown, if it thinks that
+// a variable is not used in a certain location.
+// This macro does its best to convince the compiler that
+// the variable is used in this location, to help control
+// code motion and de-duplication that would result in a slowdown.
+#define FORCE_REFERENCE(var)  asm volatile( "" : : "r" (var) )
+#define K255 255
+#define K171 171
+#define K85  85
+
+static void hsv2rgb_rainbow( const rgb_t* hsv, rgb_t* rgb)
+{
+    // Yellow has a higher inherent brightness than
+    // any other color; 'pure' yellow is perceived to
+    // be 93% as bright as white.  In order to make
+    // yellow appear the correct relative brightness,
+    // it has to be rendered brighter than all other
+    // colors.
+    // Level Y1 is a moderate boost, the default.
+    // Level Y2 is a strong boost.
+    const uint8_t Y1 = 1;
+    const uint8_t Y2 = 0;
+
+    // G2: Whether to divide all greens by two.
+    // Depends GREATLY on your particular LEDs
+    const uint8_t G2 = 0;
+
+    // Gscale: what to scale green down by.
+    // Depends GREATLY on your particular LEDs
+    const uint8_t Gscale = 0;
+
+    // FIXME: we store h,s,v in rgb struct
+    uint8_t hue = hsv->r;
+    uint8_t sat = hsv->g;
+    uint8_t val = hsv->b;
+
+    uint8_t offset = hue & 0x1F; // 0..31
+
+    // offset8 = offset * 8
+    uint8_t offset8 = offset;
+    {
+        offset8 <<= 1;
+        asm volatile("");
+        offset8 <<= 1;
+        asm volatile("");
+        offset8 <<= 1;
+    }
+
+    uint8_t third = scale8( offset8, (256 / 3));
+
+    uint8_t r, g, b;
+
+    if( ! (hue & 0x80) ) {
+        // 0XX
+        if( ! (hue & 0x40) ) {
+            // 00X
+            //section 0-1
+            if( ! (hue & 0x20) ) {
+                // 000
+                //case 0: // R -> O
+                r = K255 - third;
+                g = third;
+                b = 0;
+                FORCE_REFERENCE(b);
+            } else {
+                // 001
+                //case 1: // O -> Y
+                if( Y1 ) {
+                    r = K171;
+                    g = K85 + third ;
+                    b = 0;
+                    FORCE_REFERENCE(b);
+                }
+                if( Y2 ) {
+                    r = K171 + third;
+                    //uint8_t twothirds = (third << 1);
+                    uint8_t twothirds = scale8( offset8, ((256 * 2) / 3));
+                    g = K85 + twothirds;
+                    b = 0;
+                    FORCE_REFERENCE(b);
+                }
+            }
+        } else {
+            //01X
+            // section 2-3
+            if( !  (hue & 0x20) ) {
+                // 010
+                //case 2: // Y -> G
+                if( Y1 ) {
+                    //uint8_t twothirds = (third << 1);
+                    uint8_t twothirds = scale8( offset8, ((256 * 2) / 3));
+                    r = K171 - twothirds;
+                    g = K171 + third;
+                    b = 0;
+                    FORCE_REFERENCE(b);
+                }
+                if( Y2 ) {
+                    r = K255 - offset8;
+                    g = K255;
+                    b = 0;
+                    FORCE_REFERENCE(b);
+                }
+            } else {
+                // 011
+                // case 3: // G -> A
+                r = 0;
+                FORCE_REFERENCE(r);
+                g = K255 - third;
+                b = third;
+            }
+        }
+    } else {
+        // section 4-7
+        // 1XX
+        if( ! (hue & 0x40) ) {
+            // 10X
+            if( ! ( hue & 0x20) ) {
+                // 100
+                //case 4: // A -> B
+                r = 0;
+                FORCE_REFERENCE(r);
+                //uint8_t twothirds = (third << 1);
+                uint8_t twothirds = scale8( offset8, ((256 * 2) / 3));
+                g = K171 - twothirds;
+                b = K85  + twothirds;
+
+            } else {
+                // 101
+                //case 5: // B -> P
+                r = third;
+                g = 0;
+                FORCE_REFERENCE(g);
+                b = K255 - third;
+
+            }
+        } else {
+            if( !  (hue & 0x20)  ) {
+                // 110
+                //case 6: // P -- K
+                r = K85 + third;
+                g = 0;
+                FORCE_REFERENCE(g);
+                b = K171 - third;
+
+            } else {
+                // 111
+                //case 7: // K -> R
+                r = K171 + third;
+                g = 0;
+                FORCE_REFERENCE(g);
+                b = K85 - third;
+
+            }
+        }
+    }
+
+    // This is one of the good places to scale the green down,
+    // although the client can scale green down as well.
+    if( G2 ) g = g >> 1;
+    if( Gscale ) g = scale8_video_LEAVING_R1_DIRTY( g, Gscale);
+
+    // Scale down colors if we're desaturated at all
+    // and add the brightness_floor to r, g, and b.
+    if( sat != 255 ) {
+
+        nscale8x3_video( r, g, b, sat);
+
+        uint8_t desat = 255 - sat;
+        desat = scale8( desat, desat);
+
+        uint8_t brightness_floor = desat;
+        r += brightness_floor;
+        g += brightness_floor;
+        b += brightness_floor;
+    }
+
+    // Now scale everything down if we're at value < 255.
+    if( val != 255 ) {
+
+        val = scale8_video_LEAVING_R1_DIRTY( val, val);
+        nscale8x3_video( r, g, b, val);
+    }
+
+    // Here we have the old AVR "missing std X+n" problem again
+    // It turns out that fixing it winds up costing more than
+    // not fixing it.
+    // To paraphrase Dr Bronner, profile! profile! profile!
+    //asm volatile(  ""  :  :  : "r26", "r27" );
+    //asm volatile (" movw r30, r26 \n" : : : "r30", "r31");
+    rgb->r = r;
+    rgb->g = g;
+    rgb->b = b;
+}
 
 
 

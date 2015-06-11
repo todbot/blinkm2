@@ -29,14 +29,6 @@ const patternline_t patternlines_rgb[] PROGMEM = {
     { 'c', rgb( 0x00, 0x33, 0x00 ),  200, 0 }, // 1  grn all
     { 'c', rgb( 0x00, 0x00, 0x33 ),  200, 0 }, // 2  blu all
 };
-const patternline_t patternlines_rgbmulti[] PROGMEM = {
-    { 'c', rgb( 0x33, 0x00, 0x00 ),  200, 1 }, // 0  red all
-    { 'c', rgb( 0x00, 0x33, 0x00 ),  200, 1 }, // 1  grn all
-    { 'c', rgb( 0x00, 0x00, 0x33 ),  200, 1 }, // 2  blu all
-    { 'c', rgb( 0x33, 0x00, 0x00 ),  200, 2 }, // 0  red all
-    { 'c', rgb( 0x00, 0x33, 0x00 ),  200, 2 }, // 1  grn all
-    { 'c', rgb( 0x00, 0x00, 0x33 ),  200, 2 }, // 2  blu all
-};
 
 const patternline_t patternlines_blink_white[] PROGMEM = {
     { 'c', rgb( 0x11, 0x11, 0x11 ),  50, 0 }, // 0  white all
@@ -56,6 +48,20 @@ const patternline_t patternlines_hues[] PROGMEM = {
     { 'h', rgb( 0xc0, 0xff, 0xff ),  100, 0x62 }, 
 };
 
+const patternline_t patternlines_rgbmulti[] PROGMEM = {
+    { 'c', rgb( 0x33, 0x00, 0x00 ),  50, 1 }, 
+    { 'c', rgb( 0x00, 0x33, 0x00 ),  50, 1 }, 
+    { 'c', rgb( 0x00, 0x00, 0x33 ),  50, 1 }, 
+    { 'c', rgb( 0x33, 0x00, 0x00 ),  100, 2 }, 
+    { 'c', rgb( 0x00, 0x33, 0x00 ),  100, 2 }, 
+    { 'c', rgb( 0x00, 0x00, 0x33 ),  100, 2 }, 
+    { 'c', rgb( 0x44, 0x44, 0x44 ),  100, 0 }, 
+    { 'c', rgb( 0x00, 0x00, 0x00 ),  100, 0  }, 
+    { 'c', rgb( 0x00, 0x44, 0x44 ),  200, 64 + 0  }, 
+    { 'c', rgb( 0x44, 0x00, 0x44 ),  200, 64 + 1 }, 
+    { 'c', rgb( 0x00, 0x00, 0x00 ),  50,  0  }, 
+};
+
 const patternline_t* const patterns[] PROGMEM = {
     patternlines_default,
     patternlines_rgb,
@@ -72,7 +78,7 @@ const int pattern_lens[] PROGMEM = {
     2,
     3,
     4,
-    6,
+    11,
 };
 
 
