@@ -1,7 +1,7 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-#define NUM_LEDS 4
+#define NUM_LEDS 8
 #define I2C_ADDR 0x09
 #define PATT_MAX 16  // FIXME:
 // tick msec
@@ -45,7 +45,8 @@ const int LED_PIN = redPin;
 const int redPin = 9;
 const int grnPin = 10;
 const int bluPin = 11;
-const int LED_PIN = 6;
+//const int LED_PIN = 6;
+const int LED_PIN = 7;
 #endif
 
 
