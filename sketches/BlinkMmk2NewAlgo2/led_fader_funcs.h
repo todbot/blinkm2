@@ -17,6 +17,9 @@
 #include "config.h"
 #include "led_fader_types.h"
 
+ledline_t ledlines[NUM_LEDS];
+fader_t fader;
+
 // set the values of an rgb struct
 #define rgb_set( c, ar, ag, ab ) {c.r=ar; c.g=ag; c.b=ab; }
 
@@ -30,7 +33,7 @@ bool led_should_set( uint8_t pos, uint8_t ledn );
 //
 // compute the amount the fader will move ever led_update_millis
 //
-#define led_compute_faderposinc( m ) (( (uint32_t)65535 * led_update_millis) / (m))
+#define led_compute_faderposinc( m ) (( (uint32_t)FADERPOS_MAX * led_update_millis) / (m))
 
 //
 // scale an 8-bit value by an 8-bit "percentage" (that ranges from 0-255)
@@ -51,15 +54,17 @@ uint8_t scale8( uint8_t i, fract8 scale)
 bool led_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount )
 {
     if( blend_amount == 0) {
+        //memcpy( curr, start, 3 );
         curr->r = start->r;
         curr->g = start->g;
         curr->b = start->b;
     }
     else if( blend_amount == 255) {
+        //memcpy( curr, dest, 3 );
         curr->r = dest->r;
         curr->g = dest->g;
         curr->b = dest->b;
-        return true;
+       return true;
     }
     else {
         fract8 keep_amount = 256 - blend_amount;
@@ -76,43 +81,6 @@ bool led_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount )
     return false;
 }
 
-
-//
-// Set the destination color for a set of LEDs
-// @param new new led color
-// @param dmillis time to fade to new color in "deci-millis"  (10msec ticks)
-// @param ledn, which led to change, 0==all leds
-//
-void led_set_dest_old( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
-{
-    if( ledn > NUM_LEDS ) { ledn = NUM_LEDS;  }
-    uint8_t st  = ledn;
-    uint8_t end = ledn;
-    if( st==0 ) { end = NUM_LEDS; }
-    else { st--;  } // adjust for 1..n => 0..(n-1)
-
-    for( uint8_t i = st; i< end; i++ ) {
-        rgb_t* curc = &leds[i];   // current led rgb value
-        fader_t* f = &faders[i];  // fader for this led
-        // reset fader position & inc amount
-        f->faderpos = 0;
-        f->faderposinc = led_compute_faderposinc( dmillis );
-        //f->faderposinc = ((uint32_t)65535 * 10) / dmillis ; ////zzled_compute_faderposinc( 1, dmillis );
-        if( i==0 ) { // debug
-            dbg(curc->r); dbg(curc->g); dbg(curc->b);  dbgln("=set");
-        }
-        // make current color the new start color
-        f->last.r = curc->r;
-        f->last.g = curc->g;
-        f->last.b = curc->b;
-        // make new color the new destination
-        f->dest.r = newc->r;
-        f->dest.g = newc->g;
-        f->dest.b = newc->b;
-    }
-}
-
-
 //
 void led_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
 {
@@ -122,23 +90,60 @@ void led_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
         if( !shouldSet ) continue;
         
         rgb_t* curc = &leds[i];   // current led rgb value
-        fader_t* f = &faders[i];  // fader for this led
+        ledline_t* ll = &ledlines[i];
         // reset fader position & inc amount
-        f->faderpos = 0;
-        f->faderposinc = led_compute_faderposinc( dmillis );
-        //f->faderposinc = ((uint32_t)65535 * 10) / dmillis ; ////zzled_compute_faderposinc( 1, dmillis );
-        dbg("set_dest:"); dbg(i); dbg(':'); dbg(f->faderposinc); dbg(':');
+        fader.pos = 0;
+        fader.posinc = led_compute_faderposinc( dmillis );
+        fader.ledn = ledn;;
+        
+        dbg("set_dest:"); dbg(i); dbg(':'); dbg(fader.posinc); dbg(':');
         dbg(curc->r); dbg(','); dbg(curc->g); dbg(','); dbg(curc->b); dbgln('.');
 
         // make current color the new start color
-        f->last.r = curc->r;
-        f->last.g = curc->g;
-        f->last.b = curc->b;
+        ll->last.r = curc->r;
+        ll->last.g = curc->g;
+        ll->last.b = curc->b;
         // make new color the new destination
-        f->dest.r = newc->r;
-        f->dest.g = newc->g;
-        f->dest.b = newc->b;
+        ll->dest.r = newc->r;
+        ll->dest.g = newc->g;
+        ll->dest.b = newc->b;
     }
+}
+
+//
+// Update the state of all faders and state of current LEDs
+// Should be called every led_update_millis()
+// normally lives in led_fader.c, but can't use dbg() there
+//
+void led_update_faders()
+{
+    uint8_t pos = fader.pos / 256;  // FIXME: document this descale
+    bool donefading = (fader.pos > (FADERPOS_MAX - fader.pos));
+    if( !donefading ) 
+        fader.pos += fader.posinc;  // move fader a bit more forwards
+    
+    for( uint8_t i=0; i< NUM_LEDS; i++ ) {
+      //dbgln("led:");
+        boolean shouldSet = led_should_set( i, fader.ledn );
+        if( !shouldSet ) continue;
+        rgb_t* curc  = &leds[i];
+        rgb_t* start = &(ledlines[i].last);
+        rgb_t* end   = &(ledlines[i].dest);
+#if 0
+        if( i==0 ) { // debug
+            dbg(curc->r); dbg(','); dbg(curc->g); dbg(','); dbg(curc->g);
+            dbgln(" = cur");
+        }
+#endif
+        if( !donefading ) {
+            led_blend( curc, start, end, pos );  // do next increment of fade
+        } else { 
+            curc->r = end->r;
+            curc->g = end->g;
+            curc->b = end->b;
+        }
+    }
+                    
 }
 
 
@@ -256,36 +261,6 @@ bool led_should_set( uint8_t pos, uint8_t ledn )
     return false;
 }
 
-//
-// Update the state of all faders and state of current LEDs
-// Should be called every led_update_millis()
-// normally lives in led_fader.c, but can't use dbg() there
-//
-void led_update_faders()
-{
-    uint8_t i;
-    for( i=0; i< NUM_LEDS; i++ ) {
-      //dbgln("led:");
-        rgb_t* curc  = &leds[i];
-        rgb_t* start = &(faders[i].last);
-        rgb_t* end   = &(faders[i].dest);
-        uint8_t faderpos = faders[i].faderpos / 256;  // FIXME: document this divide
-#if 0
-        if( i==0 ) { // debug
-            dbg(curc->r); dbg(','); dbg(curc->g); dbg(','); dbg(curc->g);
-            dbgln(" = cur");
-        }
-#endif   
-        bool donefading = led_blend( curc, start, end, faderpos );  // do next increment of fade
-        if( !donefading ) 
-            faders[i].faderpos += faders[i].faderposinc;
-        else {
-            curc->r = end->r;
-            curc->g = end->g;
-            curc->b = end->b;
-        }
-    }
-}
 
 
 

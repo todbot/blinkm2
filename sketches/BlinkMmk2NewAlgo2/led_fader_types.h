@@ -20,6 +20,21 @@ typedef struct {
     rgb_t dest;           // destination/ending color
     uint16_t faderpos;    // position of fade, ranges from 0-65535 (0=last,65535=dest)
     uint16_t faderposinc; // amount of to increment fader_val by each tick 
-} fader_t_;
+} fader_orig_t;
+
+// ONLY NEED A SINGLE FADER FOR CURRENT FADE
+// So ends up being like:
+typedef struct {
+    rgb_t last;           // last / starting color
+    rgb_t dest;           // destination/ending color
+} ledline_t;
+
+typedef struct {
+    uint16_t pos;    // position of fade, ranges from 0-65535 (0=last,65535=dest)
+    uint16_t posinc; // amount of to increment fader_val by each tick
+    uint8_t ledn;  // which LEDs to fade
+} fader_t;
+
+#define FADERPOS_MAX (0xffff - 1)
 
 #endif

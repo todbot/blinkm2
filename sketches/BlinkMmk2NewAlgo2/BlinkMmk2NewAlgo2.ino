@@ -29,7 +29,6 @@
 //                           +----+
 */
 
-
 // configuration for multple boards and debug helpers
 #include "config.h"
 
@@ -88,9 +87,7 @@ uint32_t pattern_update_next;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // we need an leds array, so pull it from neopixel library
-rgb_t* leds = (rgb_t*)strip.getPixels(); 
-fader_t faders[NUM_LEDS];
-
+rgb_t* leds = (rgb_t*)strip.getPixels();
 
 // note: we have funcs in header file because of Arduino compile limitations
 #include "led_fader_funcs.h"
@@ -107,10 +104,11 @@ void handle_script_cmd();
 //
 void setup()
 {
+    digitalWrite( redPin, HIGH );
     strip.begin();
-    strip.show(); // Initialize all pixels to 'off'
+    //strip.show(); // Initialize all pixels to 'off'
     strip.setBrightness(128);
-    
+
 #if defined(__BLINKM_BOARD__)
     TinyWireS.begin(I2C_ADDR);
 #else
@@ -118,20 +116,22 @@ void setup()
     Serial.begin(115200);
     dbgln("BlinkMmk2!");
 #endif
-
+    
+    
 #if 0
     // load up EEPROM from flash, 
     // to deal with fact that Arduino uploader doesn't upload EEPROM
     for( uint8_t i=0; i<PATT_MAX; i++ ) {
-    memcpy_P( &pltmp, &(patternlines_default[i]), sizeof(patternline_t) ); 
-    eeprom_write_block( &pltmp, &(patternlines_ee[i]), sizeof(patternline_t) );
+        memcpy_P( &pltmp, &(patternlines_default[i]), sizeof(patternline_t) ); 
+        eeprom_write_block( &pltmp, &(patternlines_ee[i]), sizeof(patternline_t) );
     }
 #endif
-    
+   
     //  FIXME: check for play on boot
     script_id = 5;
     play_script();
     
+    digitalWrite( redPin, LOW );
 }
 
 //
@@ -163,7 +163,7 @@ void update_led_state()
     // playing light pattern
     if( playing ) {
       if( (long)(now - pattern_update_next) > 0  ) { // time to get next line
-        digitalWrite(grnPin, (ledtoggle++)%2 );
+        //digitalWrite(grnPin, (ledtoggle++)%2 );
         
         get_next_patternline();
         

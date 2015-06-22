@@ -1,7 +1,7 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-#define NUM_LEDS 32
+#define NUM_LEDS 24
 #define I2C_ADDR 0x09
 #define PATT_MAX 16  // FIXME:
 // tick msec
