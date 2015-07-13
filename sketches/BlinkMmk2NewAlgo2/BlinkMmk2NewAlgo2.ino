@@ -18,15 +18,15 @@
 /*
 // ATMEL ATTINY84 / ARDUINO
 //
-//                           +-\/-+
-//                     VCC  1|    |14  GND
-//             (D 10)  PB0  2|    |13  AREF (D  0)
-//             (D  9)  PB1  3|    |12  PA1  (D  1) 
-//                     PB3  4|    |11  PA2  (D  2) 
-//  PWM  INT0  (D  8)  PB2  5|    |10  PA3  (D  3) 
-//  PWM        (D  7)  PA7  6|    |9   PA4  (D  4) 
-//  PWM        (D  6)  PA6  7|    |8   PA5  (D  5)        PWM
-//                           +----+
+//                          +-\/-+
+//                    VCC  1|    |14  GND
+//             (D10)  PB0  2|    |13  AREF (D0)
+//              (D9)  PB1  3|    |12  PA1  (D1) 
+//      RESET         PB3  4|    |11  PA2  (D2) 
+// PWM  INT0    (D8)  PB2  5|    |10  PA3  (D3) 
+// PWM          (D7)  PA7  6|    |9   PA4  (D4)   SCL
+// PWM MOSI/SDA (D6)  PA6  7|    |8   PA5  (D5)  MISO PWM
+//                          +----+
 */
 
 // configuration for multple boards and debug helpers

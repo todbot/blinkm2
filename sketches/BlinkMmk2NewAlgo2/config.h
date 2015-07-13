@@ -34,10 +34,10 @@ const int grnPin = 7;   // PA7 OC0B
 const int bluPin = 5;   // PA5 OC1B 'i' pin
 const int sdaPin = 6;   // PA6 
 const int sclPin = 9;   // PA4
-const int in0Pin = A0;  // PA0
-const int in1Pin = A1;  // PA1
-const int in2Pin = A2;  // PA2
-const int in3Pin = A3;  // PA3
+const int in0Pin = 0;   // was A0 PA0
+const int in1Pin = 1;   // was A1 PA1
+const int in2Pin = 2;   // was A2 PA2
+const int in3Pin = 3;   // was A3 PA3
 const int LED_PIN = redPin;
 #else
 #warning "unknown board type, assuming UNO"
