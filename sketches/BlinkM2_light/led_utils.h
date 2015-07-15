@@ -4,16 +4,17 @@
 #ifndef _LED_UTILS_H_
 #define _LED_UTILS_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "config.h"
 #include "light_ws2812.h"
 #include "led_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 #define led_update_millis 10
 
@@ -40,6 +41,12 @@ bool led_should_set( uint8_t pos, uint8_t ledn );
 
 bool led_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount );
 
+
+uint8_t random8();
+
+//void hsv2rgb_rainbow( const rgb_t* hsv, rgb_t* rgb);
+void hsv2rgb_rainbow( const rgb_t* hsv, rgb_t* rgb);
+void hsv2rgb_raw_C (const rgb_t* hsv, rgb_t* rgb);
 
 #ifdef __cplusplus
 }
