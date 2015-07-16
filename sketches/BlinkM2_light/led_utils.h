@@ -19,7 +19,8 @@ extern "C" {
 #define led_update_millis 10
 
 //
-void led_setBrightness(uint8_t b);
+uint8_t led_get_brightness();
+void led_set_brightness(uint8_t b);
 
 //
 void led_setN(  uint8_t r, uint8_t g, uint8_t b, uint8_t n );
@@ -31,7 +32,7 @@ void led_setAll( uint8_t r, uint8_t g, uint8_t b);
 void led_show();
 
 //
-int ledfader_update();
+bool ledfader_update();
 
 //
 void ledfader_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn );
@@ -41,6 +42,9 @@ bool led_should_set( uint8_t pos, uint8_t ledn );
 
 bool led_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount );
 
+
+uint8_t scale8( uint8_t i, fract8 scale);
+uint8_t scale8_video( uint8_t i, fract8 scale);
 
 uint8_t random8();
 

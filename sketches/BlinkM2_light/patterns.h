@@ -11,7 +11,19 @@ struct patternline_t {
     uint16_t dmillis; // hundreths of a sec
     uint8_t ledn;     // number of led, or 0 for all
 };
-
+/*
+struct patternline_t {
+    uint8_t cmd;
+    union {
+        struct { 
+            rgb_t color;
+            uint16_t dmillis; // hundreths of a sec
+            uint8_t ledn;     // number of led, or 0 for all
+        };
+        uint8_t args[6];
+    };
+};
+*/
 // doesn't work on avr-gcc 4.8?
 //#define rgb(ar,ag,ab) { .r=ar, .g=ag, .b=ab }
 
@@ -44,10 +56,11 @@ const patternline_t patternlines_stoplight[] PROGMEM = {
 };
 
 const patternline_t patternlines_hues[] PROGMEM = {
-    { 'h', rgb( 0x00, 0xff, 0xff ),  100, 0 }, 
-    { 'h', rgb( 0x40, 0xff, 0xff ),  100, 0 }, 
-    { 'h', rgb( 0x80, 0xff, 0xff ),  100, 0 }, 
-    { 'h', rgb( 0xc0, 0xff, 0xff ),  100, 0 }, 
+    { 'h', rgb( 0x00, 0xff, 0xff ),  50, 0 }, 
+    { 'h', rgb( 0x40, 0xff, 0xff ),  50, 0 }, 
+    { 'h', rgb( 0x80, 0xff, 0xff ),  50, 0 }, 
+    { 'h', rgb( 0xc0, 0xff, 0xff ),  50, 0 },
+    { 'B', rgb( 0, -13, 0),           10, 0 },
 };
 
 const patternline_t patternlines_rgbmulti[] PROGMEM = {
@@ -82,7 +95,7 @@ const uint8_t pattern_lens[] PROGMEM = {
     3,
     2,
     3,
-    4,
+    5,
     14,
 };
 

@@ -11,7 +11,11 @@ extern rgb_t leds[];
 extern ledvector_t ledvectors[];
 extern fader_t fader;
 
+#define ENABLE_BRIGHTNESS 1
+
+#if ENABLE_BRIGHTNESS 
 static uint8_t led_brightness;
+#endif
 
 //
 void led_show()
@@ -24,9 +28,18 @@ void led_show()
 //
 void led_setN(  uint8_t n, uint8_t r, uint8_t g, uint8_t b )
 {
+
+#if ENABLE_BRIGHTNESS
+    if( led_brightness ) {
+        r = scale8( r, led_brightness);
+        g = scale8( g, led_brightness);
+        b = scale8( b, led_brightness);
+    }
+#endif
     leds[n].r = r;
     leds[n].g = g;
     leds[n].b = b;
+    
     /*
     if(n < NUM_LEDS) {
         if( led_brightness ) { // See notes in setBrightness()
@@ -52,6 +65,10 @@ void led_setAll( uint8_t r, uint8_t g, uint8_t b)
     }
 }
 
+uint8_t led_get_brightness() {
+    return led_brightness - 1;
+}
+
 // stolen from Adafruit_NeoPixel
 // Adjust output brightness; 0=darkest (off), 255=brightest.  This does
 // NOT immediately affect what's currently displayed on the LEDs.  The
@@ -65,7 +82,7 @@ void led_setAll( uint8_t r, uint8_t g, uint8_t b)
 // the limited number of steps (quantization) in the old data will be
 // quite visible in the re-scaled version.  For a non-destructive
 // change, you'll need to re-render the full strip data.  C'est la vie.
-void led_setBrightness(uint8_t b)
+void led_set_brightness(uint8_t b)
 {
     // Stored brightness value is different than what's passed.
     // This simplifies the actual scaling math later, allowing a fast
@@ -144,7 +161,7 @@ bool led_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount )
 //
 // Update the state of all faders and state of current LEDs
 //
-int ledfader_update()
+bool ledfader_update()
 {
     uint8_t pos = fader.pos / 256;  // FIXME: document this descale
     // we're done if our current position is within reaching distance of max
@@ -197,10 +214,18 @@ void ledfader_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
         lv->last.r = curc->r;
         lv->last.g = curc->g;
         lv->last.b = curc->b;
+
         // make new color the new destination
         lv->dest.r = newc->r;
         lv->dest.g = newc->g;
         lv->dest.b = newc->b;
+#if ENABLE_BRIGHTNESS
+        if( led_brightness ) { 
+            lv->dest.r = scale8( lv->dest.r ,led_brightness);
+            lv->dest.g = scale8( lv->dest.g ,led_brightness);
+            lv->dest.b = scale8( lv->dest.b ,led_brightness);
+        }
+#endif
     }
 }
 

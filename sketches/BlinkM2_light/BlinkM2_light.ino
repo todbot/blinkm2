@@ -101,14 +101,22 @@ void setup()
     dbgblink( 6, 100, 100 );
               
     dbgln("setting All LEDs");
-    //led_setBrightness(0);
     led_setAll( 0, 0, 155 );
     led_show();
-    delay(1000);
+    delay(500);
     led_setAll( 0, 155, 0 );
     led_show();
-    delay(1000);
-    
+    delay(500);
+
+    dbgln("set_brightness All LEDs");
+    led_set_brightness(120);
+    led_setAll( 0, 0, 155 );
+    led_show();
+    delay(500);
+    led_setAll( 0, 155, 0 );
+    led_show();
+    delay(500);
+
     led_setAll( 0,0,0 );
     led_show();
     delay(1000);
@@ -158,7 +166,7 @@ void update_led_state()
     // update LEDs every led_update_millis
     if( (long)(millis() - led_update_next) > 0 ) {
         led_update_next += led_update_millis;
-        int done = ledfader_update();
+        bool done = ledfader_update();
 #if 0
         dbg("fader: pos:"); dbg(fader.pos); dbg(", posinc:"); dbg(fader.posinc);
         dbg(", done:"); dbg( done ); dbg(" = ");
@@ -197,7 +205,7 @@ void update_play_state()
             dbg(F(", start:")); dbg(playstart);
             dbg(F(", end:")); dbg(playend);
             dbg(F(", cnt:")); dbg(playcount);
-            dbgln('.');
+            dbg(F(", bright:")); dbgln(led_get_brightness());
 
         }
 
@@ -306,6 +314,18 @@ void handle_script_cmd()
         dbg("hsv2rgb: r:"); dbg(ctmp.r); dbg(",g:"); dbg(ctmp.g); dbg(",b:"); dbgln(ctmp.b);
         fade_millis = ttmp / 2;
         ledfader_set_dest( &ctmp, fade_millis, ntmp );
+    }
+    else if( cmd == 'B' ) {
+        if( ctmp.r ) {
+            led_set_brightness( ctmp.r ); // FIXME: arg naming
+        } else if( ctmp.g ) {
+            //led_set_brightness( scale8_video(led_get_brightness(), ctmp.g) ); // FIXME: arg naming
+            int16_t b = led_get_brightness();
+            int8_t d = ctmp.g;  // treat as signed
+            b += d;
+            b = (b > 255) ? 255 : (b<0) ? 0 : b; // if above 255 turn off brightness, if 
+            led_set_brightness( b );
+        }
     }
     else if( cmd == 'H' ) {
     }
