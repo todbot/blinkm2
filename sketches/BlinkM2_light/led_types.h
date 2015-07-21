@@ -10,10 +10,41 @@ typedef uint8_t   fract8;   // ANSI: unsigned short _Fract
 // rgb_t conntains info for a single RGB color
 // order is important: bytes are sent G,R,B to WS2812
 typedef struct {
+    union { 
+        struct { 
+            uint8_t g;
+            uint8_t r;
+            uint8_t b;
+        };
+        struct {
+            uint8_t arg1;
+            uint8_t arg0;
+            uint8_t arg2;
+        };
+        uint8_t raw[3];
+    };
+} rgb_t;
+
+/*
+typedef struct {
+    union {
+        //rgb_t; // rgb;
+        struct { 
+            uint8_t g;
+            uint8_t r;
+            uint8_t b;
+        };
+        uint8_t args[3];
+    };
+} args_t;
+*/
+/*
+typedef struct {
     union { uint8_t g;  uint8_t hue; uint8_t h; };
     union { uint8_t r;  uint8_t sat; uint8_t s; };
     union { uint8_t b;  uint8_t val; uint8_t v; };
-} rgb_t;
+} rgb2_t;
+*/
 
 // ONLY NEED A SINGLE FADER FOR CURRENT FADE IN PROCESS
 // So ends up being like:

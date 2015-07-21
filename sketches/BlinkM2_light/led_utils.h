@@ -40,7 +40,7 @@ void ledfader_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn );
 //
 bool led_should_set( uint8_t pos, uint8_t ledn );
 
-bool led_blend( rgb_t* curr, rgb_t* start, rgb_t* dest, fract8 blend_amount );
+bool led_blend( rgb_t* curr, const rgb_t* start, const rgb_t* dest, fract8 blend_amount );
 
 
 uint8_t scale8( uint8_t i, fract8 scale);

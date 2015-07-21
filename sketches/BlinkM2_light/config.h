@@ -5,9 +5,11 @@
 
 const int dbgpin = 5;
 
-#define NUM_LEDS 4
+#define NUM_LEDS 8
 
+#define DEBUG 1
 
+#if DEBUG 
 // can only use the below in main sketch,
 // not in C libraries
 #if defined(__AVR_ATtiny85__) || defined(__AVR_ATtiny84__)  //
@@ -20,5 +22,9 @@ const int dbgpin = 5;
 #define dbgln(x) Serial.println(x)
 #endif
 
+#else // no debug
+#define dbg(x)
+#define dbgln(x)
+#endif
 
 #endif
