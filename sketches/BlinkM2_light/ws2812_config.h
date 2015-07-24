@@ -19,12 +19,12 @@
 #if defined(__AVR_ATtiny84__)
 
 // debug board on attiny84 board
-#define ws2812_port B     // Data port 
-#define ws2812_pin  2     // Data out pin
+//#define ws2812_port B     // Data port 
+//#define ws2812_pin  2     // Data out pin
 
 // production attiny84 board 
-//#define ws2812_port A     // Data port 
-//#define ws2812_pin  7// Data out pin
+#define ws2812_port A      // Data port 
+#define ws2812_pin  7      // Data out pin
 
 #else
 

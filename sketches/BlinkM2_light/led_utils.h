@@ -8,15 +8,10 @@
 #include <stdbool.h>
 
 #include "config.h"
-#include "light_ws2812.h"
 #include "led_types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-#define led_update_millis 10
+// now in config.h
+//#define led_update_millis 10
 
 //
 uint8_t led_get_brightness();
@@ -52,9 +47,6 @@ uint8_t random8();
 void hsv2rgb_rainbow( const rgb_t* hsv, rgb_t* rgb);
 void hsv2rgb_raw_C (const rgb_t* hsv, rgb_t* rgb);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* _LED_UTILS_H_ */
 

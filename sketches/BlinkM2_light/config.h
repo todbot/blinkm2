@@ -3,6 +3,8 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
+#define led_update_millis 10
+
 const int dbgpin = 5;
 
 #define NUM_LEDS 8

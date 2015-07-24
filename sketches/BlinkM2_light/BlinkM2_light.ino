@@ -112,7 +112,6 @@ void dbgblink( uint8_t cnt, uint16_t hi, uint16_t lo )
     dbg(F(", end:"));    dbg( p.end ); \
     dbg(F(", cnt:"));    dbg( p.count ); \
     dbg(F(", pos:"));    dbg( p.pos ); \
-    dbgln('.'); \
 }
 //
 void dbg_ledstate()
@@ -152,23 +151,23 @@ void setup()
     dbgln("setting All LEDs");
     led_setAll( 0, 0, 155 );
     led_show();
-    delay(500);
+    delay(300);
     led_setAll( 0, 155, 0 );
     led_show();
-    delay(500);
+    delay(300);
 
     dbgln("set_brightness All LEDs");
     led_set_brightness(120);
     led_setAll( 0, 0, 155 );
     led_show();
-    delay(500);
+    delay(300);
     led_setAll( 0, 155, 0 );
     led_show();
-    delay(500);
+    delay(300);
 
     led_setAll( 0,0,0 );
     led_show();
-    delay(1000);
+    delay(500);
 #endif
     
 #if 1
@@ -195,9 +194,11 @@ void setup()
     //if( i2c_addr==0 || i2c_addr>0x7f) i2c_addr = I2C_ADDR;  // just in case
     //usiTwiSlaveInit( i2c_addr );
 
+    playstate_last.id = 255;  // indicate no previous script: FIXME:
+    
     //  FIXME: check for play on boot
-    play_script( 6, 0, 0, 0 ); // id, reps, start, len
-
+    play_script( 7, 0, 0, 0 ); // id, reps, start, len
+    
     pattern_update_next = millis(); // reset pattern clock
 }
 
@@ -243,12 +244,13 @@ void update_play_state()
                 playstate.pos = playstate.start; // loop the pattern
                 playstate.count--;
                 if( playstate.count == 0 ) {
-                    if( playstate_last.id != 255 )
+                    if( playstate_last.id == 255 )
                         playing = PLAY_OFF;
                     else {
+                        dbg(F("RESTORING LAST PLAYSTATE: ")); dbgln(playstate_last.id);
                         memcpy( &playstate, &playstate_last, sizeof(playstate_t) );
+                        playstate_last.id = 255;
                     }
-                    // NEED PLAYSTATE struct I think  
                     //playing = PLAY_OFF; // done!
                 } else if(playstate.count==255) {
                     playstate.count = 0; // infinite playing
@@ -256,9 +258,9 @@ void update_play_state()
             }
             pattern_update_next += ttmp;
 
-            dbg(F("update_play_state: bright:")); dbg(led_get_brightness());
+            dbg(F("update_play_state: "));
             dbg_playstate( playstate );
-
+            dbg(F(", bright:")); dbgln(led_get_brightness());
         }
 
     } // playing
@@ -326,7 +328,7 @@ void play_script(uint8_t scrid, uint8_t reps, uint8_t start, uint8_t len )
     playstate.count = reps;
     playing   = PLAY_ON;  
 
-    dbg_playstate( playstate );
+    dbg_playstate( playstate );  dbgln('.');
 
     get_next_patternline();
 }
@@ -348,11 +350,10 @@ void handle_script_cmd()
         ledfader_set_dest( &ctmp, fade_millis, ntmp );
     }
     else if( cmd == 'C' ) {             // fade to random RGB color
-        // FIXME: this uses cmdargs should use ctmp
-        uint8_t dr = cmdargs[0];
-        uint8_t dg = cmdargs[1];
-        uint8_t db = cmdargs[2];
-        ctmp = leds[ ntmp ]; // FIXME: need to parse ntmp
+        uint8_t dr = ctmp.r;
+        uint8_t dg = ctmp.g;
+        uint8_t db = ctmp.b;
+        ctmp = leds[ ntmp ]; // FIXME: need to range-check ntmp
         ctmp.r = ctmp.r + (random8() % dr ) - (dr/2); // random around prev color
         ctmp.g = ctmp.g + (random8() % dg ) - (dg/2); // random around prev color
         ctmp.b = ctmp.b + (random8() % db ) - (db/2); // random around prev color
@@ -369,7 +370,9 @@ void handle_script_cmd()
         fade_millis = ttmp / 2;  // FIXME: ttmp to fade_millis mapping
         ledfader_set_dest( &ctmp, fade_millis, ntmp );
     }
-    else if( cmd == 'B' ) { // set brightness. arg1 = set absolute, arg2 = inc/dec
+    else if( cmd == 'B' ) {            // set brightness. arg0 = set absolute, arg1 = inc/dec
+        // FIXME: make arg0 be 'mode', arg1 = val
+        // FIXME: support ledn?
         if( ctmp.arg0 ) {
             led_set_brightness( ctmp.arg0 ); // FIXME: arg naming
         }
@@ -381,59 +384,58 @@ void handle_script_cmd()
             led_set_brightness( b );
         }
     }
+    // potential other generative commands:
+    // - move to random
+    // - move to specific
+    // - swap
+    // - "increment parameter" (like ledn, jump, color etc)
     else if( cmd == 'R' ) {             // rotate leds
         // need to:
         // - copy old dest to last foreach ledfader
         // - copy new dest from next ledfader
         // - set ledn
         // - reset faderpos
-        //
-        int8_t rot = ctmp.arg0; // FIXME: arg naming
-        //dbg("rotate: "); dbgln(rot);
-        for( uint8_t i=0; i<rot; i++ ) {
-            // rotate right by one
-            //ctmp = leds[NUM_LEDS-1];
-            //ledvector_t lvtmp = ledvectors[NUM_LEDS-1];
+        // - FIXME: set led appropriately
+        int8_t rot = ctmp.arg0;
+        // FIXME: handle negative rotation
+        for( uint8_t i=0; i<rot; i++ ) {  // foreach rotation
+            // rotate by one
             rgb_t olddest = ledvectors[NUM_LEDS-1].dest;
-            //ledvectors[NUM_LEDS-1].start = ledvectors[0].dest;
             for( uint8_t j=NUM_LEDS-1; j>0; j--) {
-                //leds[j] = leds[j-1];
-                //ledvectors[j] = ledvectors[j-1];
                 ledvectors[j].last = leds[j]; // old curr becomes last
-                //ledvectors[j].dest; // old dest becomes last
                 ledvectors[j].dest = ledvectors[j-1].dest; // new dest is next led dest
-                //ledvectors[j].last = ledvectors[j-1].dest;
             }
-            //leds[0] = ctmp;
-            //ledvectors[0].last = ledvectors[0].dest;
             ledvectors[0].last = leds[0];
             ledvectors[0].dest = olddest;
-            //ledvectors[0] = lvtmp;
         }
         fader.pos = 0;  // reset fader
-        fader.ledn = 0; // affect all LEDs
+        fader.ledn = ntmp;
     }
-    /*
-    else if( cmd == 'X'  ) {  // swap two LEDS
+
+    else if( cmd == 'X'  ) {  // swap two LEDS (direct or fade-swap)  FIXME: not finished
         uint8_t p0 = ctmp.arg0;
         uint8_t p1 = ctmp.arg1;
-        ctmp =  leds[ p0 ];
-        leds[p0] = leds[p1];
-        leds[p1] = ctmp;
+        // FIXME: range check on p0,p1
+        rgb_t p0dest = ledvectors[p0].dest;
+        ledvectors[p0].dest = ledvectors[p1].dest;
+        ledvectors[p1].dest = p0dest;
+        //leds[p1] = ctmp;
     }
-    */
-    else if( cmd == 'H' ) {
+    else if( cmd == 'H' ) {           // hue random
     }
     else if( cmd == 'p' ) {           // play a pattern
-        uint8_t playid = ctmp.r; // FIXME: args
-        uint8_t reps   = ctmp.g;
-        uint8_t start  = ctmp.g;
+        uint8_t playid = ctmp.arg0;
+        uint8_t reps   = ctmp.arg1;
+        uint8_t start  = ctmp.arg2;
         uint8_t len    = ntmp;
         play_script( playid, reps, start, len );
     }
-    else if( cmd == 'f' ) {
+    else if( cmd == 'T' ) {  // random time delay
+        
     }
-    else if( cmd == 't' ) {
+    else if( cmd == 'f' ) {  // set fadespeed
+    }
+    else if( cmd == 't' ) {  // set time adjustment
     }
     else if( cmd == 'F' ) {
     }
@@ -443,13 +445,13 @@ void handle_script_cmd()
       else if( newpos > playstate.end ) playstate.pos = playstate.end;
       else playstate.pos = newpos;
     }
-    else if( cmd == 'i' ) {
+    else if( cmd == 'i' ) {   // input relative
     }
-    else if( cmd == 'I' ) {
+    else if( cmd == 'I' ) {   // input absolute
     }
-    else if( cmd == 'k' ) {
+    else if( cmd == 'k' ) {   // knob rgb
     }
-    else if( cmd == 'K' ) {
+    else if( cmd == 'K' ) {   // knob hsv
     }
     
 }

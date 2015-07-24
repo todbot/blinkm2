@@ -66,10 +66,19 @@ const patternline_t patternlines_hues[] PROGMEM = {
 };
 
 const patternline_t patternlines_rotate[] PROGMEM = {
+    //{ 'B', args(1, 0, 0),            0, 0 },
+    //{ 'c', rgb( 0x00, 0xff, 0x00 ),  0, 0 }, 
+    //{ 'c', rgb( 0x00, 0x00, 0xff ),  128+1, 0 }, 
     { 'c', rgb( 0xff, 0x00, 0x00 ),  1, 50 }, 
-    //{ 'c', rgb( 0x00, 0x00, 0x00 ),  2, 50 }, 
-    { 'R', args( 1, 0, 0),           0, 20 },
-    { 'j', args(-1, 0, 0),           0, 0 },
+    { 'R', args( 1, 0, 0),           128, 20 },
+    { 'B', args( 0, 10, 0),          0, 0 },
+    { 'j', args(-2, 0, 0),           0, 0 },
+};
+
+const patternline_t patternlines_player[] PROGMEM = {
+    { 'c', rgb( 22,22,22 ), 0, 100 },
+    { 'p', args( 8, 1, 4 ), 2, 100 },
+    { 'p', args( 8, 1, 1 ), 2, 100 },
 };
 
 const patternline_t patternlines_rgbmulti[] PROGMEM = {
@@ -96,6 +105,7 @@ const patternline_t* const patterns[] PROGMEM = {
     patternlines_stoplight,
     patternlines_hues,
     patternlines_rotate,
+    patternlines_player,
     patternlines_rgbmulti,
 };
 
@@ -108,6 +118,7 @@ const uint8_t pattern_lens[] PROGMEM = {
     PATTLEN( patternlines_stoplight ),   //3,
     PATTLEN( patternlines_hues ),        //5,
     PATTLEN( patternlines_rotate ),      //4,
+    PATTLEN( patternlines_player ),  
     PATTLEN( patternlines_rgbmulti ),    //14,
 };
 
