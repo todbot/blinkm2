@@ -42,6 +42,7 @@ uint8_t scale8( uint8_t i, fract8 scale);
 uint8_t scale8_video( uint8_t i, fract8 scale);
 
 uint8_t random8();
+uint8_t random8( uint8_t lim );
 
 //void hsv2rgb_rainbow( const rgb_t* hsv, rgb_t* rgb);
 void hsv2rgb_rainbow( const rgb_t* hsv, rgb_t* rgb);

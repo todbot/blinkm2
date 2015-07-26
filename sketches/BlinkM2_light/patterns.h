@@ -76,9 +76,10 @@ const patternline_t patternlines_rotate[] PROGMEM = {
 };
 
 const patternline_t patternlines_player[] PROGMEM = {
-    { 'c', rgb( 22,22,22 ), 0, 100 },
-    { 'p', args( 8, 1, 4 ), 2, 100 },
-    { 'p', args( 8, 1, 1 ), 2, 100 },
+    { 'c', rgb( 44,44,44 ), 0, 100 },
+    { 'p', args( 8, 1, 4 ), 2, 0 },
+    { 'p', args( 8, 1, 1 ), 2, 0 },
+    { 'c', rgb(0,0,0),      0, 300 },
 };
 
 const patternline_t patternlines_rgbmulti[] PROGMEM = {
