@@ -11,3 +11,15 @@
 *.lai
 *.la
 *.a
+
+# Eagle cruft
+*.ger
+*.xln
+*.pro
+
+# in general, don't allow zips
+*.zip
+
+# emacs cruft
+*~
+
