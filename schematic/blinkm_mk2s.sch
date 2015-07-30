@@ -4443,7 +4443,7 @@ Basic schematic elements and footprints for 0603, 1206, and PTH resistors.</desc
 <part name="U1" library="SparkFun-DigitalIC" deviceset="ATTINY24" device="QFN" value="ATTINY44QFN"/>
 <part name="GND2" library="SparkFun-20110517" deviceset="GND" device=""/>
 <part name="P+5" library="supply1" deviceset="+5V" device=""/>
-<part name="Q1" library="SparkFun-DiscreteSemi" deviceset="MOSFET-PCHANNEL" device="IRLML2244"/>
+<part name="Q1" library="SparkFun-DiscreteSemi" deviceset="MOSFET-PCHANNEL" device="IRLML2244" value="MOSFET-PCHAN"/>
 <part name="P+7" library="supply1" deviceset="+5V" device=""/>
 <part name="SUPPLY1" library="SparkFun-Aesthetics" deviceset="VCC" device=""/>
 <part name="SUPPLY2" library="SparkFun-Aesthetics" deviceset="VCC" device=""/>
@@ -4453,6 +4453,9 @@ Basic schematic elements and footprints for 0603, 1206, and PTH resistors.</desc
 <sheets>
 <sheet>
 <plain>
+<text x="171.704" y="115.316" size="1.778" layer="95">LED</text>
+<text x="135.382" y="113.03" size="1.778" layer="95">VCC</text>
+<text x="135.382" y="115.57" size="1.778" layer="95">RAW</text>
 </plain>
 <instances>
 <instance part="FRAME2" gate="G$1" x="15.24" y="7.62"/>
@@ -4487,9 +4490,12 @@ Basic schematic elements and footprints for 0603, 1206, and PTH resistors.</desc
 <instance part="P+5" gate="1" x="63.5" y="101.6" smashed="yes">
 <attribute name="VALUE" x="66.04" y="104.14" size="1.778" layer="96" rot="R180"/>
 </instance>
-<instance part="Q1" gate="G$1" x="162.56" y="99.06" rot="R270"/>
-<instance part="P+7" gate="1" x="137.16" y="101.6" smashed="yes">
-<attribute name="VALUE" x="139.7" y="104.14" size="1.778" layer="96" rot="R180"/>
+<instance part="Q1" gate="G$1" x="162.56" y="99.06" smashed="yes" rot="R270">
+<attribute name="NAME" x="156.972" y="95.504" size="1.778" layer="95"/>
+<attribute name="VALUE" x="156.718" y="92.456" size="1.778" layer="96"/>
+</instance>
+<instance part="P+7" gate="1" x="137.16" y="111.76" smashed="yes">
+<attribute name="VALUE" x="134.62" y="124.46" size="1.778" layer="96"/>
 </instance>
 <instance part="SUPPLY1" gate="1" x="172.72" y="109.22"/>
 <instance part="SUPPLY2" gate="1" x="220.98" y="154.94"/>
@@ -4574,6 +4580,7 @@ Basic schematic elements and footprints for 0603, 1206, and PTH resistors.</desc
 <segment>
 <pinref part="Q1" gate="G$1" pin="S"/>
 <pinref part="P+7" gate="1" pin="+5V"/>
+<wire x1="137.16" y1="109.22" x2="137.16" y2="99.06" width="0.1524" layer="91"/>
 <wire x1="137.16" y1="99.06" x2="157.48" y2="99.06" width="0.1524" layer="91"/>
 </segment>
 </net>
@@ -4687,8 +4694,9 @@ Basic schematic elements and footprints for 0603, 1206, and PTH resistors.</desc
 <net name="LEDEN" class="0">
 <segment>
 <pinref part="Q1" gate="G$1" pin="G"/>
-<wire x1="162.56" y1="106.68" x2="144.78" y2="106.68" width="0.1524" layer="91"/>
-<label x="147.32" y="106.68" size="1.778" layer="95"/>
+<wire x1="162.56" y1="106.68" x2="162.56" y2="109.22" width="0.1524" layer="91"/>
+<wire x1="162.56" y1="109.22" x2="149.86" y2="109.22" width="0.1524" layer="91"/>
+<label x="152.4" y="109.22" size="1.778" layer="95"/>
 </segment>
 <segment>
 <pinref part="U1" gate="G$1" pin="PB2"/>

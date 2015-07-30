@@ -25,6 +25,7 @@
 
 #if DEBUG
 
+// from: http://playground.arduino.cc/Code/AvailableMemory
 uint16_t dbg_freeram () {
   extern int __heap_start, *__brkval; 
   int v; 

@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.05" unitdist="inch" unit="inch" style="lines" multiple="10" display="no" altdistance="0.005" altunitdist="inch" altunit="inch"/>
+<grid distance="0.05" unitdist="inch" unit="mm" style="lines" multiple="10" display="no" altdistance="0.005" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="yes"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
@@ -133,7 +133,6 @@
 <layer number="219" name="219bmp" color="20" fill="1" visible="no" active="no"/>
 <layer number="220" name="220bmp" color="21" fill="1" visible="no" active="no"/>
 <layer number="221" name="221bmp" color="22" fill="1" visible="no" active="no"/>
-<layer number="222" name="222bmp" color="23" fill="1" visible="no" active="no"/>
 <layer number="223" name="223bmp" color="24" fill="1" visible="no" active="no"/>
 <layer number="224" name="224bmp" color="25" fill="1" visible="no" active="no"/>
 <layer number="225" name="225bmp" color="7" fill="1" visible="no" active="yes"/>
@@ -2092,7 +2091,7 @@ Please make sure your boards conform to these design rules.</description>
 <attribute name="VALUE" x="15.621" y="7.366" size="1.27" layer="28" rot="MR270"/>
 </element>
 <element name="U1" library="SparkFun-DigitalIC" package="QFN20" value="ATTINY44QFN" x="5.15439375" y="6.170390625" rot="MR90"/>
-<element name="Q1" library="SparkFun-DiscreteSemi" package="SOT23-3" value="MOSFET-PCHANNELIRLML2244" x="10.541" y="7.366" smashed="yes" rot="MR90">
+<element name="Q1" library="SparkFun-DiscreteSemi" package="SOT23-3" value="MOSFET-PCHAN" x="10.541" y="7.366" smashed="yes" rot="MR90">
 <attribute name="PROD_ID" value="TRANS-11153" x="10.541" y="7.366" size="1.778" layer="28" rot="MR90" display="off"/>
 <attribute name="NAME" x="11.557" y="6.2865" size="0.4064" layer="26" rot="MR90"/>
 <attribute name="VALUE" x="10.3505" y="6.35" size="0.4064" layer="28" rot="MR90"/>

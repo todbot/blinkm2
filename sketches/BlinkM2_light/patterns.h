@@ -69,9 +69,11 @@ const patternline_t patternlines_rotate[] PROGMEM = {
     //{ 'B', args(1, 0, 0),            0, 0 },
     //{ 'c', rgb( 0x00, 0xff, 0x00 ),  0, 0 }, 
     //{ 'c', rgb( 0x00, 0x00, 0xff ),  128+1, 0 }, 
-    { 'c', rgb( 0xff, 0x00, 0x00 ),  1, 50 }, 
-    { 'R', args( 1, 0, 0),           128, 20 },
-    { 'B', args( 0, 10, 0),          0, 0 },
+    { 'c', rgb( 0xff, 0x00, 0x00 ),  1, 50 },
+    // rotate: args( mode|amount, start, end )
+    { 'R', args( 1, 0, 0),           0, 20 },
+    //{ 'R', args( 1, 0, 0),           128, 20 },
+    //{ 'B', args( 0, 10, 0),          0, 0 },
     { 'j', args(-2, 0, 0),           0, 0 },
 };
 
@@ -79,7 +81,7 @@ const patternline_t patternlines_player[] PROGMEM = {
     { 'c', rgb( 44,44,44 ), 0, 100 },
     { 'p', args( 8, 1, 4 ), 2, 0 },
     { 'p', args( 8, 1, 1 ), 2, 0 },
-    { 'c', rgb(0,0,0),      0, 300 },
+    { 'c', rgb(0,0,0),      0, 100 },
 };
 
 const patternline_t patternlines_rgbmulti[] PROGMEM = {
@@ -99,109 +101,49 @@ const patternline_t patternlines_rgbmulti[] PROGMEM = {
     { 'c', rgb( 0x00, 0x00, 0x00 ),  0, 50 }, 
 };
 
+const patternline_t patternlines_fire1[] PROGMEM = {
+    { 'c', rgb( 0xff,0x44,0x00 ), 0, 10 },
+    { 'C', rgb( 0xff,0x44,0x00 ), 1, 30 },
+    { 'T', args(20,0,0),  0, 1 },
+    { 'R', args(1,0,0),  0, 10 },
+    { 'j', args(-3,0,0), 0, 0 },
+};
+
+const patternline_t patternlines_random1[] PROGMEM = {
+    { 'c', rgb( 44,44,44 ), 0, 50 },
+    { 'T', args(100,0,0 ), 0,  1 },  //
+    { 'c', rgb(0,0,0),      0, 3},
+    //{ 'T', args( 3,0,0 ), 0, 3 },
+};
+
 const patternline_t* const patterns[] PROGMEM = {
-    patternlines_default,
-    patternlines_rgb,
-    patternlines_blink_white,
-    patternlines_stoplight,
-    patternlines_hues,
-    patternlines_rotate,
-    patternlines_player,
-    patternlines_rgbmulti,
+    patternlines_default,     // 1
+    patternlines_rgb,         // 2
+    patternlines_blink_white, // 3
+    patternlines_stoplight,   // 4 
+    patternlines_hues,        // 5
+    patternlines_rotate,      // 6
+    patternlines_player,      // 7
+    patternlines_rgbmulti,    // 8
+    patternlines_fire1,       // 9
+    patternlines_random1,     // 10
+    // be sure to add pattern to pattern_lens below too
 };
 
 #define PATTLEN(x) (sizeof(x) / sizeof(patternline_t))
 // this is so lame, but can't create a flexible array of patternlines in a struct
 const uint8_t pattern_lens[] PROGMEM = {
-    PATTLEN( patternlines_default ),     //5,
-    PATTLEN( patternlines_rgb ),         //3,
-    PATTLEN( patternlines_blink_white ), //2,
-    PATTLEN( patternlines_stoplight ),   //3,
-    PATTLEN( patternlines_hues ),        //5,
-    PATTLEN( patternlines_rotate ),      //4,
-    PATTLEN( patternlines_player ),  
-    PATTLEN( patternlines_rgbmulti ),    //14,
+    PATTLEN( patternlines_default ),     //1
+    PATTLEN( patternlines_rgb ),         //2
+    PATTLEN( patternlines_blink_white ), //3
+    PATTLEN( patternlines_stoplight ),   //4
+    PATTLEN( patternlines_hues ),        //5
+    PATTLEN( patternlines_rotate ),      //6
+    PATTLEN( patternlines_player ),      //7
+    PATTLEN( patternlines_rgbmulti ),    //8
+    PATTLEN( patternlines_fire1 ),       //9 
+    PATTLEN( patternlines_random1 ),     //10
 };
-
-
-/*
-patternline_t patternlines_mem[]  = {
-    //    G     R     B    fade ledn
-    { { 0x00, 0x11, 0x00 }, 100, 0 }, // 0  red A
-    { { 0x00, 0x33, 0x00 }, 100, 0 }, // 1  red B
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 2  off both
-    { { 0x11, 0x00, 0x00 }, 100, 0 }, // 3  grn A
-    { { 0x33, 0x00, 0x00 }, 100, 0 }, // 4  grn B
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 5  off both
-    { { 0x00, 0x00, 0x11 }, 100, 0 }, // 6  blu A
-    { { 0x00, 0x00, 0x33 }, 100, 0 }, // 7  blu B
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 8  off both
-    { { 0x10, 0x10, 0x10 }, 100, 0 }, // 9  half-bright, both LEDs
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 10 off both
-    { { 0x11, 0x11, 0x11 }, 100, 0 }, // 11 white A
-    { { 0x20, 0x20, 0x20 }, 100, 0 }, // 12 off A
-    { { 0x30, 0x30, 0x30 }, 100, 0 }, // 13 white B
-    { { 0x40, 0x40, 0x40 }, 100, 0 }, // 14 off B
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
-};
-*/
-/*
-#if 0
-patternline_t patternlines_default[] PROGMEM = {
-    //    G     R     B    fade ledn
-    { { 0x00, 0x11, 0x00 },  100, 1 }, // 0  red A
-    { { 0x00, 0x11, 0x00 },  100, 2 }, // 1  red B
-    { { 0x00, 0x00, 0x00 },  100, 0 }, // 2  off both
-    { { 0x11, 0x00, 0x00 },  100, 1 }, // 3  grn A
-    { { 0x11, 0x00, 0x00 },  100, 2 }, // 4  grn B
-    { { 0x00, 0x00, 0x00 },  100, 0 }, // 5  off both
-    { { 0x00, 0x00, 0x11 },  100, 1 }, // 6  blu A
-    { { 0x00, 0x00, 0x11 },  100, 2 }, // 7  blu B
-    { { 0x00, 0x00, 0x00 },  100, 0 }, // 8  off both
-    { { 0x10, 0x10, 0x10 }, 100, 0 }, // 9  half-bright, both LEDs
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 10 off both
-    { { 0x11, 0x11, 0x11 },  50, 1 }, // 11 white A
-    { { 0x00, 0x00, 0x00 },  50, 1 }, // 12 off A
-    { { 0x7f, 0x7f, 0x7f },  50, 2 }, // 13 white B
-    { { 0x00, 0x00, 0x00 }, 100, 2 }, // 14 off B
-    { { 0x00, 0x00, 0x00 }, 100, 0 }, // 15 off everyone
-};
-#endif
-*/
 
 #endif
 
-/*
-// this does not work
-struct pattern_t {
-    uint8_t len;  // number of script lines, 0 == blank script, not playing
-    patternline_t lines[];
-};
-static const pattern_t pattern_default PROGMEM  = { 
-    3, 
-    //(patternline_t[3])
-    {
-        { { 0x00, 0xff, 0x00 },  50, 0 }, // 0  red all
-        { { 0xff, 0x00, 0x00 },  50, 0 }, // 1  grn all
-        { { 0x00, 0x00, 0xff },  50, 0 }, // 2  blu all
-    }
-};
-*/
-
-
-/*
-typedef struct {
-    uint8_t len;  // number of script lines, 0 == blank script, not playing
-    patternline_t lines[];
-} pattern2_t;
-
-pattern_t patterntoo PROGMEM = { 
-    3, 
-    (patternline_t[3]) 
-    {
-        { { 0x00, 0xff, 0x00 },  50, 0 }, // 0  red all
-        { { 0xff, 0x00, 0x00 },  50, 0 }, // 1  grn all
-        { { 0x00, 0x00, 0xff },  50, 0 }, // 2  blu all
-    },
-};
-*/

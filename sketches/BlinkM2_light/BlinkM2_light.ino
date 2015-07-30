@@ -138,7 +138,7 @@ void setup()
     playstate_last.id = PLAYSTATE_NONE;  // indicate no previous script
     
     //  FIXME: check for play on boot
-    play_script( 7, 0, 0, 0 ); // id, reps, start, len
+    play_script( 9, 0, 0, 0 ); // id, reps, start, len
     
     //pattern_update_next = millis(); // reset pattern clock
 }
@@ -186,20 +186,23 @@ void update_play_state()
             if( playstate.pos == playstate.end ) {
                 playstate.pos = playstate.start; // loop the pattern
                 playstate.count--;
-                if( playstate.count == 0 ) {
+                if( playstate.count == 0 ) { // done playing?
                     if( playstate_last.id == PLAYSTATE_NONE )
                         playing = PLAY_OFF;
                     else { // we were gosub'd
                         dbg(F("update_play_state: RESTORING: ")); dbgln(playstate_last.id);
                         memcpy( &playstate, &playstate_last, sizeof(playstate_t) );
                         playstate_last.id = PLAYSTATE_NONE;
-                        playstate.pos++;  // FIXME: doesn't check for end
+                        playstate.pos++;  
+                        if( playstate.pos == playstate.end )
+                            playstate.pos = playstate.start;
+                        // FIXME: the above is a hack
                     }
                 } else if(playstate.count==255) { // decremented past zero, so was zero before
                     playstate.count = 0; // infinite playing
                 }
             }
-
+            //dbg(F("\tttmp:")); dbgln(ttmp);
             pattern_update_next += ttmp;  // set next pattern time
 
         }
@@ -297,6 +300,23 @@ void handle_script_cmd()
     // cmd: fade to random RGB color
     // args: r,g,b random amount, fade_millis, ledn
     else if( cmd == 'C' ) {
+        // not this one, can result in no red, all green
+        //ctmp.r = random8() % ctmp.r; 
+        //ctmp.g = random8() % ctmp.g;
+        //ctmp.b = random8() % ctmp.b;
+        
+        uint16_t dr = ctmp.r;
+        uint16_t dg = ctmp.g;
+        uint16_t db = ctmp.b;
+
+        // FIXME: using ttmp for "amount" of random, which is also used for pattern_next_millis
+
+        ctmp.r = (dr!=0) ? dr + (random8() % ttmp ) - (ttmp/2) : 0; // random around prev color
+        ctmp.g = (dg!=0) ? dg + (random8() % ttmp ) - (ttmp/2) : 0; // random around prev color
+        ctmp.b = (db!=0) ? db + (random8() % ttmp ) - (ttmp/2) : 0; // random around prev color
+        ledfader_set_dest( &ctmp, fade_millis, ntmp );
+        
+        /*
         uint8_t dr = ctmp.r;
         uint8_t dg = ctmp.g;
         uint8_t db = ctmp.b;
@@ -305,6 +325,7 @@ void handle_script_cmd()
         ctmp.g = ctmp.g + (random8() % dg ) - (dg/2); // random around prev color
         ctmp.b = ctmp.b + (random8() % db ) - (db/2); // random around prev color
         ledfader_set_dest( &ctmp, fade_millis, ntmp );
+        */
     }
     // cmd: fade to HSV color
     // args: h,s,v, fade_millis, ledn
@@ -341,7 +362,8 @@ void handle_script_cmd()
     // - move to specific
     // - swap
     // - "increment parameter" (like ledn, jump, color etc)
-
+    // - "time" based functions?j  ("jump if time > x"?)
+    
     // cmd: rotate leds
     // args: arg0 = rotation amount (+/-)
     else if( cmd == 'R' ) {
@@ -394,10 +416,14 @@ void handle_script_cmd()
     else if( cmd == 's' ) {
         playing = 0;
     }
-    // cmd: random time delay
+    // cmd: random time delay around midpoint
+    // args: ttmp is min time, arg0 is additive max (maybe arg1 is low byte?)
     else if( cmd == 'T' ) {
-        ttmp = ttmp + 10 * (random8() % ctmp.arg1);
-        //ttmp = ttmp + 10 * random8( ctmp.arg1);
+        //if (ctmp.arg0 > pltmp.dmillis) ctmp.arg0 = pltmp.dmillis/2; // FIXME: verify this works
+        //ttmp = ttmp - ((10*ctmp.arg0)/2) + (10 * (random8(ctmp.arg0)); // FIXME: gah
+        //ttmp = ttmp + 10 * (random8() % ctmp.arg0);
+        ttmp = ttmp + (10 * (random8() % (ctmp.arg0+1))); 
+        dbg(F("\thandle_script: T ttmp:")); dbgln(ttmp);
     }
     // cmd: set fadespeed       // map to fade_millis slope adjust?
     // arg0: fade_scale, where 127 = std slope
