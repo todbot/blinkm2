@@ -95,7 +95,6 @@ void led_set_brightness(uint8_t b)
 
 // ----------------------------------------------------------------------------
 
-
 //
 // blend between a start color and a destination color
 // by an 8-bit "fractional" amount ranging from 0-255 (0=start, 255=dest)
@@ -201,6 +200,35 @@ void ledfader_set_dest( rgb_t* newc, uint16_t dmillis, uint8_t ledn )
         }
 #endif
     }
+}
+
+//
+void ledfader_rotateLEDs( uint8_t amount, uint8_t start, uint8_t end, uint8_t mode )
+{
+        // need to:
+        // - copy old dest to last foreach ledfader
+        // - copy new dest from next ledfader
+        // - set ledn
+        // - reset faderpos
+        // FIXME: set led appropriately
+        // FIXME: handle negative rotation
+    
+    // mode == 0 : rotate w/ carry
+    // mode == 1 : rotate w/ drop
+    // mode == 2 : bounce
+    // if start < end then rotate to right
+    // if start > end then rotate to left
+    for( uint8_t i=0; i<amount; i++ ) {  // foreach rotation
+        // rotate by one to the right, with loop
+        rgb_t olddest = ledvectors[end].dest; 
+        for( uint8_t j=end; j>start; j--) {
+            ledvectors[j].last = leds[j]; // old curr becomes last
+            ledvectors[j].dest = ledvectors[j-1].dest; // new dest is next led dest
+        }
+        ledvectors[start].last = leds[0];
+        ledvectors[start].dest = olddest;
+    }
+    
 }
 
 // ---------------------------------------------------------------------------

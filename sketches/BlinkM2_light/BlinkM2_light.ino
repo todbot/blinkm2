@@ -138,7 +138,7 @@ void setup()
     playstate_last.id = PLAYSTATE_NONE;  // indicate no previous script
     
     //  FIXME: check for play on boot
-    play_script( 9, 0, 0, 0 ); // id, reps, start, len
+    play_script( 10, 0, 0, 0 ); // id, reps, start, len
     
     //pattern_update_next = millis(); // reset pattern clock
 }
@@ -304,7 +304,7 @@ void handle_script_cmd()
         //ctmp.r = random8() % ctmp.r; 
         //ctmp.g = random8() % ctmp.g;
         //ctmp.b = random8() % ctmp.b;
-        
+        /*        
         uint16_t dr = ctmp.r;
         uint16_t dg = ctmp.g;
         uint16_t db = ctmp.b;
@@ -315,8 +315,8 @@ void handle_script_cmd()
         ctmp.g = (dg!=0) ? dg + (random8() % ttmp ) - (ttmp/2) : 0; // random around prev color
         ctmp.b = (db!=0) ? db + (random8() % ttmp ) - (ttmp/2) : 0; // random around prev color
         ledfader_set_dest( &ctmp, fade_millis, ntmp );
-        
-        /*
+        */
+
         uint8_t dr = ctmp.r;
         uint8_t dg = ctmp.g;
         uint8_t db = ctmp.b;
@@ -324,8 +324,9 @@ void handle_script_cmd()
         ctmp.r = ctmp.r + (random8() % dr ) - (dr/2); // random around prev color
         ctmp.g = ctmp.g + (random8() % dg ) - (dg/2); // random around prev color
         ctmp.b = ctmp.b + (random8() % db ) - (db/2); // random around prev color
+        fade_millis = ttmp/2;
         ledfader_set_dest( &ctmp, fade_millis, ntmp );
-        */
+
     }
     // cmd: fade to HSV color
     // args: h,s,v, fade_millis, ledn
@@ -367,14 +368,9 @@ void handle_script_cmd()
     // cmd: rotate leds
     // args: arg0 = rotation amount (+/-)
     else if( cmd == 'R' ) {
-        // need to:
-        // - copy old dest to last foreach ledfader
-        // - copy new dest from next ledfader
-        // - set ledn
-        // - reset faderpos
-        // FIXME: set led appropriately
-        // FIXME: handle negative rotation
         int8_t rot = ctmp.arg0;
+        //ledfader_rotate( ctmp.arg0, ctmp.arg1, ctmp.arg2, ledn );
+            
         for( uint8_t i=0; i<rot; i++ ) {  // foreach rotation
             // rotate by one
             rgb_t olddest = ledvectors[NUM_LEDS-1].dest;
@@ -385,7 +381,7 @@ void handle_script_cmd()
             ledvectors[0].last = leds[0];
             ledvectors[0].dest = olddest;
         }
-        
+
         fader.pos = 0;  // reset fader
         fader.ledn = ntmp;
     }

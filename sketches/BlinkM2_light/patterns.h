@@ -110,10 +110,18 @@ const patternline_t patternlines_fire1[] PROGMEM = {
 };
 
 const patternline_t patternlines_random1[] PROGMEM = {
-    { 'c', rgb( 44,44,44 ), 0, 50 },
-    { 'T', args(100,0,0 ), 0,  1 },  //
-    { 'c', rgb(0,0,0),      0, 3},
+    { 'C', rgb( 155,155,155), 1, 30 },
+    { 'R', args(1,0,0),  0, 30 },
+    //{ 'T', args(100,0,0 ), 0,  1 },  //
+    //{ 'c', rgb(0,0,0),      0, 3},
     //{ 'T', args( 3,0,0 ), 0, 3 },
+};
+
+const patternline_t patternlines_rotate2[] PROGMEM = {
+    { 'c', rgb( 44,44,44 ), 0, 50 },
+    { 'R', args( 1, 3,5), 1, 50 }, // ledn is mode?  1=bounce, 0=1-way
+    { 'R', args( -1, 3,5), 0, 50 }, // ledn is mode?  1=bounce, 0=1-way
+    { 'j', args(-1,0,0), 0,0},
 };
 
 const patternline_t* const patterns[] PROGMEM = {
