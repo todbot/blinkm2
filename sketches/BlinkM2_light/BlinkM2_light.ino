@@ -13,6 +13,7 @@
  * - if play from script, save playstate_last (or offer goto vs gosub)
  */
 
+#include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 #include <avr/power.h>
 #include <avr/sleep.h>
