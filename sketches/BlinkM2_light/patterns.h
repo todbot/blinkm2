@@ -74,7 +74,7 @@ const patternline_t patternlines_rotate[] PROGMEM = {
     { 'R', args( 1, 0, 0),           0, 20 },
     //{ 'R', args( 1, 0, 0),           128, 20 },
     //{ 'B', args( 0, 10, 0),          0, 0 },
-    { 'j', args(-2, 0, 0),           0, 0 },
+//    { 'j', args(((uint8_t)-2, 0, 0),           0, 0 },
 };
 
 const patternline_t patternlines_player[] PROGMEM = {
@@ -106,7 +106,7 @@ const patternline_t patternlines_fire1[] PROGMEM = {
     { 'C', rgb( 0xff,0x44,0x00 ), 1, 30 },
     { 'T', args(20,0,0),  0, 1 },
     { 'R', args(1,0,0),  0, 10 },
-    { 'j', args(-3,0,0), 0, 0 },
+//    { 'j', args(-3,0,0), 0, 0 },
 };
 
 const patternline_t patternlines_random1[] PROGMEM = {
@@ -120,8 +120,8 @@ const patternline_t patternlines_random1[] PROGMEM = {
 const patternline_t patternlines_rotate2[] PROGMEM = {
     { 'c', rgb( 44,44,44 ), 0, 50 },
     { 'R', args( 1, 3,5), 1, 50 }, // ledn is mode?  1=bounce, 0=1-way
-    { 'R', args( -1, 3,5), 0, 50 }, // ledn is mode?  1=bounce, 0=1-way
-    { 'j', args(-1,0,0), 0,0},
+//    { 'R', args( -1, 3,5), 0, 50 }, // ledn is mode?  1=bounce, 0=1-way
+//    { 'j', args(-1,0,0), 0,0},
 };
 
 const patternline_t* const patterns[] PROGMEM = {
@@ -154,4 +154,3 @@ const uint8_t pattern_lens[] PROGMEM = {
 };
 
 #endif
-

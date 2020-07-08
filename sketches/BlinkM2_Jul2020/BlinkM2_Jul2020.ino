@@ -1,7 +1,6 @@
 /**
  *
- * BlinkM2_Jul2020 - for use with "blinkm_mk2sss" ATtiny84 board
- *   with two Analog inputs
+ * BlinkM2_Jul2020 - for use with "blinkm2neo" ATtiny85 board
  *
  * 2017-2020 Tod E. Kurt @todbot
  *
@@ -9,21 +8,23 @@
  * Libraries required:
  * - TinyWires - https://github.com/rambo/TinyWire
  * - Light_WS2812_AVR - https://github.com/cpldcpu/light_ws2812
- *
+ * - TimerOne - https://github.com/PaulStoffregen/TimerOne (must use github version, not Library Manager)
  *
  *
  */
 
 #include "blinkm_config.h"
 
+#include <TimerOne.h>
+#include <avr/eeprom.h>
+
 #include "Player.h"
 #include "LedScripts.h"
-
-#include <avr/eeprom.h>
 
 extern "C"{
 #include "light_ws2812.h"
 };
+
 
 #if defined(__BLINKM_BOARD__)
 #include "TinyWireS.h"                  // wrapper class for I2C slave routines
@@ -37,25 +38,13 @@ extern "C"{
 #define I2Cupdater()  
 #endif
 
+#include "eeprom_stuff.h"
+
 const int sclPin  = SCL_PIN;
 const int misoPin = MISO_PIN;
 const int sdaPin  = SDA_PIN;
 const int ledPin  = LED_PIN;
 
-// NOTE: can't declare EEPROM statically because Arduino loader doesn't send eeprom
-// IDEA: can we "compress" the script into eeprom, decompress into RAM?
-
-uint8_t  ee_i2c_addr         EEMEM = I2C_ADDR_DEFAULT;
-uint8_t  ee_boot_id          EEMEM = 0xB1;
-uint8_t  ee_boot_mode        EEMEM = 0x00; // FIXME: BOOT_PLAY_SCRIPT;
-uint8_t  ee_boot_script_id   EEMEM = 0x00;
-uint8_t  ee_boot_reps        EEMEM = 0x00;
-uint8_t  ee_boot_fadespeed   EEMEM = 0x08;
-uint8_t  ee_boot_timeadj     EEMEM = 0x00;
-uint8_t  ee_boot_brightness  EEMEM = 0x00;
-uint8_t  ee_unused2          EEMEM = 0xDA;
-
-script_line_t ee_script_lines[patt_max] EEMEM;
 
 uint8_t cmd;
 uint8_t args[4];
@@ -65,6 +54,7 @@ rgb_t leds[NUM_LEDS];
 
 Player player((rgb_t*) leds, NUM_LEDS);
 
+//
 void setup()
 {
     dbg_start();
@@ -91,10 +81,11 @@ void setup()
         dbgln("EEPROM NOT SET UP. Using defaults");
         boot_id = 0xB1;
         boot_mode = BOOT_PLAY_SCRIPT;
-        boot_script_id = 1;
+        boot_script_id = 18; //1; //17;
         boot_reps = 0;
-        boot_fadespeed = 8;
+        boot_fadespeed = 3;  // 8
         boot_timeadj = 0;
+        boot_brightness = 55; // 255
     }
     // initialize i2c interface 
     if( i2c_addr==0 || i2c_addr>0x7f) { i2c_addr = I2C_ADDR_DEFAULT; }  
@@ -103,17 +94,23 @@ void setup()
     // verify BEGIN ws2812 library works
     leds[0].r = 255;
     ws2812_setleds((cRGB*)leds,NUM_LEDS);
-    delay(500);                         // wait for 500ms.
+    delay(300);                         // wait for 500ms.
     leds[0].b = 255;
     ws2812_setleds((cRGB*)leds,NUM_LEDS);
-    delay(500);                         // wait for 500ms.
+    delay(300);                         // wait for 500ms.
     leds[0] = rgb_t(0,0,0);
     delay(100);
     // verify END
 
+    //Timer1.initialize(500000); //The led will blink in a half second time interval
+    Timer1.initialize(10000); // every 10 millis
+    //Timer1.initialize(30000); // every 30 millis
+    Timer1.attachInterrupt(updatePlayer);
+
     player.setFadespeed( boot_fadespeed );
     player.setInputs(inputs);
-
+    player.setBrightness(boot_brightness);
+    
     if( boot_mode == BOOT_PLAY_SCRIPT ) {
         //play_script( boot_script_id, boot_reps, 0 );
         player.playScript( boot_script_id, boot_reps, 0 ); // FIXME: do real startup behavior
@@ -125,19 +122,19 @@ void loop()
 {
     checkI2C();
     checkInputs();
-    updateState();
+    //updateState();
     updateStrip();
+    //player.update();
+}
+
+void updatePlayer()
+{
     player.update();
 }
 
 void updateStrip()
 {
     ws2812_setleds((struct cRGB*)leds,NUM_LEDS);
-}
-
-void updateState()
-{
-    // FIXME what goes here?
 }
 
 void checkInputs()

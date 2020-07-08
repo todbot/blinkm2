@@ -17,47 +17,17 @@
 
 #include "Arduino.h"
 
-// 
-void Player::off()
-{
-    stop();
-    rgb_t o = rgb_t(0,0,0);
-    for( int i=0; i<nLEDs; i++) {
-        leds[i] = o;
-    }
-    for( int i=0; i<faderMax; i++) { // FIXME?
-        led_dests[i] = o;
-    }
-}
+#include "utils.h"
 
-
-void Player::doFadersOld()
-{
-    // // global fader
-    // if( led_dest_global != leds[19] ) { // FIXME: bad hack
-    //     rgb_t l = leds[19];
-    //     rgb_t ld = led_dest_global;
-    //     rgb_t lnew = rgb_t( colorSlide(l.r, ld.r, fadespeed),
-    //                         colorSlide(l.g, ld.g, fadespeed),
-    //                         colorSlide(l.b, ld.b, fadespeed) );
-    //     for( int i=0; i<nLEDs; i++ ) {
-    //         leds[i] = lnew;
-    //     }
-    // }
-    
-    // // individual faders
-    // for( int i=0; i<faderMax; i++) { 
-    //     rgb_t l = leds[i];   // current value
-    //     rgb_t ld = led_dests[i]; // destination value
-    //     leds[ i ] = rgb_t( colorSlide( l.r, ld.r, fadespeed),
-    //                        colorSlide( l.g, ld.g, fadespeed),
-    //                        colorSlide( l.b, ld.b, fadespeed) );
-    // }
-}
 
 // run faders, only first 0..faderMax LEDs have faders
 void Player::doFaders()
 {
+#if 1
+    for( int i=0; i< nLEDs; i++) { 
+        leds[i].slideTowards(led_dests[i], fadespeed);
+    }
+#else
     for( int i=0; i< nLEDs; i++) { 
         rgb_t l = leds[i];   // current value
         rgb_t ld = led_dests[i]; // destination value
@@ -65,27 +35,31 @@ void Player::doFaders()
                            colorSlide( l.g, ld.g, fadespeed),
                            colorSlide( l.b, ld.b, fadespeed) );
     }
+#endif
 }   
 
+//#define tickfudge 4
 // Call this periodically
 void Player::update(void)
 {
-    if( !playing ) { return;  }
-
-    uint32_t now = millis();
-    if( (long)(now - tickUpdateNext) < 0 ) { // not time yet
-        return;
-    }
-    tickUpdateNext = now + 10;
-    tick++;
-
+    // uint32_t now = millis();
+    // if( (long)(now - tickUpdateNext) < 0 ) { // not time yet
+    //     return;
+    // }
+    // tickUpdateNext = now + 33 - tickfudge;  // was 10, because thought we wanted 10 between ticks, but maybe 3?
+    //tick++;
+    
     doFaders();
 
+    if( !playing ) { return; }
+
+    tick++;
     if( tick == 3 ) { // roughly 1/30th second FIXME
         tick=0;
         scriptTick++;
     }
 
+    // FIXME: only place script_curr is used outside of loading line
     if( scriptTick < script_curr.dur ) { // ready to go to next line?
         return; // no
     }
@@ -122,7 +96,6 @@ void Player::playScript(uint8_t scriptid, uint8_t reps, uint8_t pos)
     scriptReps = reps;
     playing = true;
     scriptLen = (scriptId>0) ? script_lengths[scriptId-1] : 16; // FIXME: needs EEPROM scriptlen 
-    //fadespeed = 3;
     playNextScriptLine();
 }
 
@@ -141,8 +114,8 @@ void Player::playNextScriptLine()
         // then, get next script line at current script position
         //memcpy_P(&script_curr, &sl, sizeof(script_line_t));
         
-
-        const script_line_t* sl = scripts[scriptId-1] + playPos;
+        
+        const script_line_t* sl = scripts[scriptId-1] + playPos;  // for scripts in RAM
         
         //const script_line_t* sl = script_rgb + playPos;
         memcpy_P(&script_curr, sl, sizeof(script_line_t));
@@ -150,11 +123,12 @@ void Player::playNextScriptLine()
         // this works
         // memcpy_P(&script_curr, script_rgb + playPos, sizeof(script_line_t));
 
-        dbg("scriptId:"); dbg(scriptId); dbg(" scriptLen:"); dbg(scriptLen); dbg(" playPos:"); dbg(playPos);
-        //dbg(" flash line:"); dbg(sizeof(script_line_t*)); dbg(":"); dbgln(sizeof(script_line_t));
-        dbg("   cmd:"); dbg(script_curr.cmd);
-        dbg(" args:"); dbg(script_curr.args[0]);
-        dbg(","); dbg(script_curr.args[1]); dbg(","); dbgln(script_curr.args[2]);
+        // dbg("scriptId:"); dbg(scriptId); dbg(" scriptLen:"); dbg(scriptLen); dbg(" playPos:"); dbg(playPos);
+        // //dbg(" flash line:"); dbg(sizeof(script_line_t*)); dbg(":"); dbgln(sizeof(script_line_t));
+        // dbg("   cmd:"); dbg(script_curr.cmd);
+        // dbg(" args:"); dbg(script_curr.args[0]);
+        // dbg(","); dbg(script_curr.args[1]); dbg(","); dbgln(script_curr.args[2]);
+
     }
     
     cmd = script_curr.cmd;
@@ -165,6 +139,7 @@ void Player::playNextScriptLine()
     handleCmd();
 }
 
+//
 void Player::handleCmd(uint8_t c, uint8_t a0, uint8_t a1, uint8_t a2)
 {
     setCmd(c);
@@ -172,134 +147,142 @@ void Player::handleCmd(uint8_t c, uint8_t a0, uint8_t a1, uint8_t a2)
     handleCmd();
 }
 
-
 // handle the current script line, or a command set up via setCmd() & setAargs()
 //  lights leds, etc.
 void Player::handleCmd()
 {
-    dbg("handleCmd:"); dbg(scriptId); dbg(':'); dbg(playPos); dbg('/'); dbg(scriptLen);
-    dbg("  cmd:"); dbg(cmd); dbg(" args:"); dbg(args[0]); dbg(","); dbg(args[1]); dbg(","); dbgln(args[2]);
+    dbg("handleCmd:");
+    dbg(scriptId); dbg(':'); dbg(playPos); dbg('/'); dbg(scriptLen);
+    dbg("  cmd:"); dbg(cmd); dbg(" args:"); dbg(args[0]); dbg(","); dbg(args[1]); dbg(","); dbg(args[2]);
+    dbgln();
+    //dbg("freeMem:"); dbgln(freeMemory());
 
-    if( cmd == 'l' ) { // set which LED to operate on
-        dbgln("@@@ ledn!");
+    int i; rgb_t lastc, newc;
+
+    switch(cmd) {
+    case '.':                 // set which LED to operate on
+        dbg("@@@ ledn! "); dbgln(args[0]);
         ledn = args[0]; 
-        if( ledn > faderMax ) {
-            ledn = 0;
+        if( ledn >= nLEDs ) { ledn = 0; }
+        break;
+
+    case 'b':                 // set brightness
+        brightness = args[0];
+        for( int i=0; i<nLEDs; i++) {
+            leds[i].dim(brightness);
+            led_dests[i].dim(brightness);
         }
-    }
-    else if( cmd == 'n' ) { // set rgb color now
-        rgb_t newc = rgb_t(args[0], args[1], args[2]);
+        break;
+
+    case '>':                 // move leds to the right
+        
+        break;
+
+    case 'n':                 // set rgb color now
+        newc = rgb_t(args[0], args[1], args[2]);
         if( ledn == 0 ) {
             for( int i=0 ; i< nLEDs; i++) { 
-                leds[i] = newc;
-                led_dests[i] = newc;
+                leds[i] = led_dests[i] = newc;
             }
         }
         else {
-            leds[ ledn-1 ] = newc;
-            led_dests[ ledn-1 ] = newc;
+            leds[ ledn-1 ] = led_dests[ ledn-1 ] = newc;
         }
-    }
-    else if( cmd == 'c' ) { // fade to rgb color
-        rgb_t newc = rgb_t(args[0], args[1], args[2]);
+        break;
+
+    case 'c':                 // fade to rgb color
+        newc = rgb_t(args[0], args[1], args[2]);
+        newc.dim(brightness);
         if( ledn == 0 ) { // change all LEDs?
             for( int i=0 ; i< nLEDs; i++) { 
                 led_dests[ i ] = newc;
             }
         }
-        else {           // or change one LED
+        else {                // or change one LED
             led_dests[ ledn-1 ] = newc;
-        }
-    }
-    else if( cmd == 'C' ) {  // fade to random rgb color
+        }        
+        break;
 
-    }
-    else if( cmd == 'h' ) {  // fade to HSV
+    case 'C':                 // fade to random rgb color
+        // fixme:
+        i = (ledn==0) ? 0 : ledn-1;
+        lastc = led_dests[i];
+        newc = rgb_t( get_rand_range(lastc.r, args[0]),
+                            get_rand_range(lastc.g, args[1]),
+                            get_rand_range(lastc.b, args[2]) );
+        led_dests[i] = newc;
+        dbg("lastc:");dbg(lastc.r);dbg(',');dbg(lastc.g);dbg(',');dbg(lastc.b);
+        dbg(" newc:");dbg(newc.r);dbg(',');dbg(newc.g);dbg(',');dbg(newc.b); dbgln();        
+        break;
+
+    case 'h':                 // fade to HSV
         uint8_t r,g,b;
         hsvToRgb( args[0], args[1], args[2], &r, &g, &b);
         led_dests[ledn] = rgb_t(r,g,b); // fixme: make better
-    }
-    else if( cmd == 'H' ) {  // fade to random HSV
-        
-    }
-    else if( cmd == 'p' ) {  // play script
-        playScript( args[0], args[1], args[2] );
-    }
-    else if( cmd == 'f' ) {  // set fadespeed
-        fadespeed = args[0];
-    }
-    else if( cmd == 't' ) {  // time adjust
-        timeadj = args[0];
-    }
-    else if( cmd == 'F' ) { // change fade speed on input
+        break;
 
-    }
-    else if( cmd == 'j' )  { // jump back relative
-        playPos += args[0] - 1;
-    }
-    else if( cmd == 'i' ) { // read inputs and act
+    case 'H':                 // fade to random HSV
+        i = (ledn==0) ? 0 : ledn-1;
+        dbg("last hsv:");dbg(hue);dbg(',');dbg(sat);dbg(',');dbg(bri);
+        hue = get_rand_range( hue, args[0] );
+        sat = get_rand_range( sat, args[1] );
+        bri = get_rand_range( bri, args[2] );
+        
+        hsvToRgb( hue,sat,bri, &newc.r, &newc.g, &newc.b );
+        led_dests[i] = newc;
+        dbg(" new hsv:");dbg(hue);dbg(',');dbg(sat);dbg(',');dbg(bri); dbgln();        
+        break;
+
+    case 'p':                 // play script
+        playScript( args[0], args[1], args[2] );
+        break;
+        
+    case 'f':                 // set fadespeed
+        fadespeed = args[0];
+        break;
+
+    case 't':                 // time adjust
+        timeadj = args[0];
+        break;
+
+    case('T'):                // random time delay   // FIXME: test this
+        script_curr.dur = get_rand_range( script_curr.dur, args[0] );
+        break;
+
+    case 'F':                 // change fade speed on input
+        break;
+
+    case 'j':                 // jump back relative
+        playPos += args[0] - 1;        
+        break;
+
+    case 'i':                // read inputs and act
         if( inputs[ args[0] ] > args[1] ) {
             playPos += args[2] - 1;
         }
+        break;
+
+    case 'o':                 // stop playback
+        stop();
+        break;
+        
     }
 }
 
-// liner interpolation (lerp) of curr to dest by step amount
-// TODO: look into 'lerp8by8()' in FastLED/lib8tion.h
-uint8_t Player::colorSlide( uint8_t curr, uint8_t dest, uint8_t step )
+// 
+void Player::off()
 {
-    int diff = curr - dest;
-    if(diff < 0)  diff = -diff;
-
-    if( diff <= step ) return dest;
-    if( curr == dest ) return dest;
-    else if( curr < dest ) return curr + step;
-    else                   return curr - step;
-}
-
-// from https://stackoverflow.com/a/22120275/221735
-void Player::hsvToRgb(uint8_t oh, uint8_t os, uint8_t ov,
-                      uint8_t* r, uint8_t* g, uint8_t* b)
-{
-    unsigned char region, p, q, t;
-    unsigned int h, s, v, remainder;
-
-    if (os == 0) {
-        *r = ov;  *g = ov;  *b = ov;
-        return;
+    stop();
+    rgb_t o = rgb_t(0,0,0);
+    for( int i=0; i<nLEDs; i++) {
+        leds[i] = o;
     }
-
-    // converting to 16 bit to prevent overflow
-    h = oh;  s = os;   v = ov;
-
-    region = h / 43;
-    remainder = (h - (region * 43)) * 6;
-
-    p = (v * (255 - s)) >> 8;
-    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
-    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
-
-    switch (region) {
-        case 0:
-            *r = v;  *g = t;  *b = p;
-            break;
-        case 1:
-            *r = q;  *g = v;  *b = p;
-            break;
-        case 2:
-            *r = p;  *g = v;  *b = t;
-            break;
-        case 3:
-            *r = p;  *g = q;  *b = v;
-            break;
-        case 4:
-            *r = t;  *g = p;  *b = v;
-            break;
-        default:
-            *r = v;  *g = p;  *b = q;
-            break;
+    for( int i=0; i<faderMax; i++) { // FIXME?
+        led_dests[i] = o;
     }
 }
+
+
 
 // void Player::setStripUpdater( callback_t callback )
 // {
@@ -371,3 +354,34 @@ void Player::hsvToRgb(uint8_t oh, uint8_t os, uint8_t ov,
 //                           colorSlide( l.b, ld.b, fadespeed) );
 // }
 
+/*
+#define FASTLED_SCALE8_FIXED 1
+typedef uint8_t   fract8;   ///< ANSI: unsigned short _Fract
+///  scale one byte by a second one, which is treated as
+///  the numerator of a fraction whose denominator is 256
+///  In other words, it computes i * (scale / 256)
+static inline uint8_t scale8( uint8_t i, fract8 scale)
+{
+#if (FASTLED_SCALE8_FIXED == 1)
+    return (((uint16_t)i) * (1+(uint16_t)(scale))) >> 8;
+#else
+    return ((uint16_t)i * (uint16_t)(scale) ) >> 8;
+#endif
+}
+/// linear interpolation between two unsigned 8-bit values,
+/// with 8-bit fraction
+static inline uint8_t lerp8by8( uint8_t a, uint8_t b, fract8 frac)
+{
+    uint8_t result;
+    if( b > a) {
+        uint8_t delta = b - a;
+        uint8_t scaled = scale8( delta, frac);
+        result = a + scaled;
+    } else {
+        uint8_t delta = a - b;
+        uint8_t scaled = scale8( delta, frac);
+        result = a - scaled;
+    }
+    return result;
+}
+*/

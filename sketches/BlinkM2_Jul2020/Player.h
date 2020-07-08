@@ -29,7 +29,8 @@ class Player
     uint8_t cmd;     // cmd currently being worked on (from i2c or script)
     uint8_t args[3]; // args for cmd
     uint8_t ledn; // current led to operate on, 0= all, 1st led = 1, 2nd = 2, ...
-
+    uint8_t brightness;
+    
     // fader logic consists of array of 'ledn' (ids of which LED to modify)
     // and matching array of destination colors
     //uint8_t ledns[faderMax];  // multi fader support, 255= not in use, 0=all, 1= 1st led, etc.
@@ -42,6 +43,8 @@ class Player
     //rgb_t led_dest;
     uint8_t fadespeed;
     int8_t timeadj;
+
+    uint8_t hue, sat, bri;
     
  public:
     Player(rgb_t* pleds, uint8_t nnLEDs )
@@ -50,19 +53,19 @@ class Player
         nLEDs = nnLEDs;
         ledn = 0;
         playing = false;
-        fadespeed = 100;
+        fadespeed = 10;
+        brightness = 255;
         off();
     }
-
+    
     void update(); // call as fast as possible
 
     void doFaders();
-    void doFadersOld();
-    //void addFader();
 
     void setFadespeed( uint8_t fs ) { fadespeed = fs; }
     void setInputs( uint8_t* ins) { inputs = ins; }
-
+    void setBrightness(uint8_t b) { brightness = b; }
+    
     void setCmd(uint8_t c) { cmd = c; }
     void setArgs(uint8_t a, uint8_t b, uint8_t c) {
         args[0] = a;  args[1] = b;  args[2] = c;
@@ -81,9 +84,9 @@ class Player
 
     // utilities
     //
-    uint8_t colorSlide( uint8_t curr, uint8_t dest, uint8_t step );
-    void hsvToRgb(uint8_t oh, uint8_t os, uint8_t ob,
-                  uint8_t* r, uint8_t* g, uint8_t* b);
+    //uint8_t colorSlide( uint8_t curr, uint8_t dest, uint8_t step );
+    //void hsvToRgb(uint8_t oh, uint8_t os, uint8_t ob,
+    //              uint8_t* r, uint8_t* g, uint8_t* b);
 };
 
 #endif
