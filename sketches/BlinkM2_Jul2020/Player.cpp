@@ -60,7 +60,7 @@ void Player::update(void)
     }
 
     // FIXME: only place script_curr is used outside of loading line
-    if( scriptTick < script_curr.dur ) { // ready to go to next line?
+    if( scriptTick < dur ) { // ready to go to next line?
         return; // no
     }
     scriptTick = 0; // reset our ticker
@@ -86,6 +86,18 @@ void Player::update(void)
     }
 }
 
+uint8_t getScriptLen(uint8_t scriptId)
+{
+    uint8_t len = 16; // default max for EEPROM  FIXME
+    if( scriptId>0 ) {
+        //len = script_lengths[scriptId-1]; // RAM
+        len = pgm_read_byte( &script_lengths[scriptId-1] );
+        dbg("len:"); dbgln(len);
+        if( len==0 || len > 16 ) len = 16;
+    }
+    return len;
+}
+
 //
 void Player::playScript(uint8_t scriptid, uint8_t reps, uint8_t pos)
 {
@@ -95,47 +107,34 @@ void Player::playScript(uint8_t scriptid, uint8_t reps, uint8_t pos)
     scriptTick = 0;
     scriptReps = reps;
     playing = true;
-    scriptLen = (scriptId>0) ? script_lengths[scriptId-1] : 16; // FIXME: needs EEPROM scriptlen 
+    scriptLen = getScriptLen(scriptId);
     playNextScriptLine();
 }
+
 
 //
 void Player::playNextScriptLine()
 {
+    script_line_t script_curr; 
     if( scriptId == 0 ) {   // eeprom
         // eeprom_read_block( &script_curr, &ee_script_lines[playPos],
         //                     sizeof(script_line_t));
     }
     else {                  // flash
-        //script_line_t* sl;
-        // get pointer to scriptline set
-        //memcpy_P(&sl, &scripts[scriptId-1], sizeof(script_line_t*));
-        //const script_line_t* sl =  scripts_flash[scriptId-1];
-        // then, get next script line at current script position
-        //memcpy_P(&script_curr, &sl, sizeof(script_line_t));
-        
-        
-        const script_line_t* sl = scripts[scriptId-1] + playPos;  // for scripts in RAM
-        
-        //const script_line_t* sl = script_rgb + playPos;
+        // first get pointer to scriptline set
+        script_line_t* sl = pgm_read_ptr( &scripts[scriptId-1] );
+        // ofset pointer to current play position
+        sl += playPos;
+        // read actual script line
         memcpy_P(&script_curr, sl, sizeof(script_line_t));
-        
-        // this works
-        // memcpy_P(&script_curr, script_rgb + playPos, sizeof(script_line_t));
-
-        // dbg("scriptId:"); dbg(scriptId); dbg(" scriptLen:"); dbg(scriptLen); dbg(" playPos:"); dbg(playPos);
-        // //dbg(" flash line:"); dbg(sizeof(script_line_t*)); dbg(":"); dbgln(sizeof(script_line_t));
-        // dbg("   cmd:"); dbg(script_curr.cmd);
-        // dbg(" args:"); dbg(script_curr.args[0]);
-        // dbg(","); dbg(script_curr.args[1]); dbg(","); dbgln(script_curr.args[2]);
-
     }
     
-    cmd = script_curr.cmd;
+    cmd     = script_curr.cmd;
     args[0] = script_curr.args[0];
     args[1] = script_curr.args[1];
     args[2] = script_curr.args[2];
-
+    dur     = script_curr.dur;
+    
     handleCmd();
 }
 
@@ -152,7 +151,7 @@ void Player::handleCmd(uint8_t c, uint8_t a0, uint8_t a1, uint8_t a2)
 void Player::handleCmd()
 {
     dbg("handleCmd:");
-    dbg(scriptId); dbg(':'); dbg(playPos); dbg('/'); dbg(scriptLen);
+    dbg(scriptId); dbg(':'); dbg(dur); dbg(':'); dbg(playPos); dbg('/'); dbg(scriptLen);
     dbg("  cmd:"); dbg(cmd); dbg(" args:"); dbg(args[0]); dbg(","); dbg(args[1]); dbg(","); dbg(args[2]);
     dbgln();
     //dbg("freeMem:"); dbgln(freeMemory());
@@ -246,7 +245,7 @@ void Player::handleCmd()
         break;
 
     case('T'):                // random time delay   // FIXME: test this
-        script_curr.dur = get_rand_range( script_curr.dur, args[0] );
+        dur = get_rand_range( dur, args[0] );
         break;
 
     case 'F':                 // change fade speed on input

@@ -17,30 +17,30 @@ class Player
     //callback_t stripUpdater;
 
     uint8_t tick; // 1/100th ticks
-    uint32_t tickUpdateNext;
+    //uint32_t tickUpdateNext;
 
     uint8_t scriptTick;
     uint8_t scriptId;
     uint8_t scriptLen;
     uint8_t scriptReps;
     uint8_t playPos;
-    script_line_t script_curr;
 
     uint8_t cmd;     // cmd currently being worked on (from i2c or script)
     uint8_t args[3]; // args for cmd
+    uint8_t dur;     // duration of this command
+   
     uint8_t ledn; // current led to operate on, 0= all, 1st led = 1, 2nd = 2, ...
     uint8_t brightness;
     
     // fader logic consists of array of 'ledn' (ids of which LED to modify)
     // and matching array of destination colors
     //uint8_t ledns[faderMax];  // multi fader support, 255= not in use, 0=all, 1= 1st led, etc.
+
+    // for now: every led in leds[] gets an led_dests[] fader target
     rgb_t led_dests[faderMax]; // multi fader support
 
-    /// make this a ref to main object?
-    // uint8_t inputs[3];  // analog inputs
-    uint8_t* inputs;  // analog inputs
+    uint8_t* inputs;  // analog inputs, pointer to global held in main sketch
 
-    //rgb_t led_dest;
     uint8_t fadespeed;
     int8_t timeadj;
 
@@ -58,7 +58,7 @@ class Player
         off();
     }
     
-    void update(); // call as fast as possible
+    void update(); // called by Timer object every 10ms
 
     void doFaders();
 
@@ -82,11 +82,6 @@ class Player
     void stop() { playing = false; }
     void off();
 
-    // utilities
-    //
-    //uint8_t colorSlide( uint8_t curr, uint8_t dest, uint8_t step );
-    //void hsvToRgb(uint8_t oh, uint8_t os, uint8_t ob,
-    //              uint8_t* r, uint8_t* g, uint8_t* b);
 };
 
 #endif

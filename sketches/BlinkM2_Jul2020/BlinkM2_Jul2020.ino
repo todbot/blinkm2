@@ -25,17 +25,20 @@ extern "C"{
 #include "light_ws2812.h"
 };
 
-
 #if defined(__BLINKM_BOARD__)
 #include "TinyWireS.h"                  // wrapper class for I2C slave routines
 #define I2C           TinyWireS
 #define I2Cread       TinyWireS.receive
 #define I2Cupdater()  TinyWireS_stop_check()
-#else
+#define I2Cbegin(x)   TinyWireS.begin(x)
+#elif defined(__BLINKM_DEV__)
 #include "Wire.h"
 #define I2C            Wire
 #define I2Cread        Wire.read
-#define I2Cupdater()  
+#define I2Cupdater()
+#define I2Cbegin(x)    Wire.begin(x)
+#else
+#error "Unknown setup"
 #endif
 
 #include "eeprom_stuff.h"
@@ -45,13 +48,16 @@ const int misoPin = MISO_PIN;
 const int sdaPin  = SDA_PIN;
 const int ledPin  = LED_PIN;
 
-
+// data read from I2C
 uint8_t cmd;
 uint8_t args[4];
-uint8_t inputs[4];
+// 
+uint8_t inputs[2];
 
+// 
 rgb_t leds[NUM_LEDS];
 
+// Does all the hard work
 Player player((rgb_t*) leds, NUM_LEDS);
 
 //
@@ -81,15 +87,15 @@ void setup()
         dbgln("EEPROM NOT SET UP. Using defaults");
         boot_id = 0xB1;
         boot_mode = BOOT_PLAY_SCRIPT;
-        boot_script_id = 18; //1; //17;
+        boot_script_id = 18; //17;
         boot_reps = 0;
-        boot_fadespeed = 3;  // 8
+        boot_fadespeed = 2; //8;
         boot_timeadj = 0;
-        boot_brightness = 55; // 255
+        boot_brightness = 25; // 255
     }
     // initialize i2c interface 
     if( i2c_addr==0 || i2c_addr>0x7f) { i2c_addr = I2C_ADDR_DEFAULT; }  
-    // TinyWireS.begin(i2c_addr);
+    I2Cbegin(i2c_addr);
 
     // verify BEGIN ws2812 library works
     leds[0].r = 255;

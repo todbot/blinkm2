@@ -12,9 +12,9 @@
 
 // R,G,B,R,G,B,....
 const script_line_t script_rgb[] PROGMEM = {
-    { 50, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
-    { 50, {'c', {0x00,0xff,0x00} } },
-    { 50, {'c', {0x00,0x00,0xff} } },
+    { 50, {'c', {0xf1,0x00,0x00} } },  //cmd, r,g,b
+    { 50, {'c', {0x00,0xf3,0x00} } },
+    { 50, {'c', {0x00,0x00,0xf5} } },
 };
 
 // white blink on & off
@@ -209,9 +209,10 @@ const script_line_t script_blinkm_default[] PROGMEM = {
       { 50,  {'c', {0x00,0x00,0x00}}}
 };
 
+
 // PUT THESE IN RAM FOR NOW
 // const script_line_t* const scripts[] PROGMEM = {
-const script_line_t* const scripts[] = {
+const script_line_t* const scripts[] PROGMEM = {
     script_rgb,             // 1
     script_blink_white,     // 2
     script_blink_red,       // 3
@@ -235,7 +236,7 @@ const script_line_t* const scripts[] = {
 };
 
 // this is so lame, but can't create a flexible array of patternlines in a struct in C++
-const int script_lengths[] = {
+const uint8_t script_lengths[] PROGMEM =  {
      ARRAY_SIZE( script_rgb ), 
      ARRAY_SIZE( script_blink_white ),
      ARRAY_SIZE( script_blink_red ),
