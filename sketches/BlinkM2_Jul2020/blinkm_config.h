@@ -28,7 +28,7 @@ const int I2C_ADDR_DEFAULT = 0x09;
 #define SCL_PIN   2
 #define MISO_PIN  1
 #define SDA_PIN   0
-#define LED_PIN   2
+#define LED_PIN   3  // PB3? yes PB3, old BlinkM datasheet schematic is wrong (pin2 on SOIC)
 #else
 // Arduino ProMicro pinout
 #define SCL_PIN   3

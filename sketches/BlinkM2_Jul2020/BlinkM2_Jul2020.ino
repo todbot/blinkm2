@@ -29,12 +29,14 @@ extern "C"{
 #include "TinyWireS.h"                  // wrapper class for I2C slave routines
 #define I2C           TinyWireS
 #define I2Cread       TinyWireS.receive
+#define I2Cwrite(x)   TinyWireS.send(x)
 #define I2Cupdater()  TinyWireS_stop_check()
 #define I2Cbegin(x)   TinyWireS.begin(x)
 #elif defined(__BLINKM_DEV__)
 #include "Wire.h"
 #define I2C            Wire
 #define I2Cread        Wire.read
+#define I2Cwrite(x)    Wire.write(x)
 #define I2Cupdater()
 #define I2Cbegin(x)    Wire.begin(x)
 #else
@@ -50,7 +52,8 @@ const int ledPin  = LED_PIN;
 
 // data read from I2C
 uint8_t cmd;
-uint8_t args[4];
+uint8_t args[7];
+
 // 
 uint8_t inputs[2];
 
@@ -70,9 +73,11 @@ void setup()
     //pinMode(a1Pin, INPUT_PULLUP);
     //pinMode(misoPin, INPUT_PULLUP);
 
+#if defined(__BLINKM_DEV__)
     delay(2000);  // for debug
     dbgln("setup done!");
-
+#endif
+    
     // set up
     uint8_t i2c_addr       = eeprom_read_byte( &ee_i2c_addr ); 
     uint8_t boot_id        = eeprom_read_byte( &ee_boot_id );
@@ -91,21 +96,21 @@ void setup()
         boot_reps = 0;
         boot_fadespeed = 2; //8;
         boot_timeadj = 0;
-        boot_brightness = 25; // 255
+        boot_brightness = 255; //25; // 255
     }
     // initialize i2c interface 
     if( i2c_addr==0 || i2c_addr>0x7f) { i2c_addr = I2C_ADDR_DEFAULT; }  
     I2Cbegin(i2c_addr);
 
     // verify BEGIN ws2812 library works
-    leds[0].r = 255;
+    leds[0] = rgb(255,255,0);
     ws2812_setleds((cRGB*)leds,NUM_LEDS);
     delay(300);                         // wait for 500ms.
-    leds[0].b = 255;
+    leds[0] = rgb(0,255,255);
     ws2812_setleds((cRGB*)leds,NUM_LEDS);
     delay(300);                         // wait for 500ms.
     leds[0] = rgb_t(0,0,0);
-    delay(100);
+    delay(300);
     // verify END
 
     //Timer1.initialize(500000); //The led will blink in a half second time interval
@@ -163,28 +168,69 @@ void checkI2C()
     }
       
     switch(cmd) {
-        case('o'):  // stop playback
-            player.stop();
+    case('o'):               // stop playback
+        player.stop();
+        break;
+    case('f'):               // set fade speed
+    case('t'):               // set time adjust
+    case('.'):               // set ledn
+        readI2CVals(1);
+        player.handleCmd(cmd, args[0], 0, 0);
+        break;
+    case('n'):
+    case('c'):
+    case('C'):
+    case('h'):
+    case('H'):
+    case('p'):
+        readI2CVals(3);
+        player.handleCmd(cmd, args[0],args[1],args[2]); 
+        break;
+    case('g'):                // get current RGB color
+        I2Cwrite( leds[0].r ); // FIXME
+        I2Cwrite( leds[0].g );
+        I2Cwrite( leds[0].b );
+        break;
+    case('a'):                // get i2c address
+        I2Cwrite( eeprom_read_byte(&ee_i2c_addr));
+        break;
+    case('A'):                // set i2c address
+        args[0] = 0; args[1] = 0; args[2] = 0;
+        readI2CVals(4);
+        // FIXME
+        if( args[0] != 0 && args[0] == args[3] &&
+            args[1] == 0xD0 && args[2] == 0x0D ) {  //
+            eeprom_write_byte( &ee_i2c_addr, args[0] ); // write address
+            I2Cbegin( args[0] );
+        }
+        break;
+    case('Z'):                // return protocol version
+        I2Cwrite( 'd' );
+        I2Cwrite( 'a' ); // FIXME
+        break;
+    case('R'):                // read a script line, outputs 5: dur,cmd,arg1,arg2,arg3
+        readI2CVals(2);
+        script_line_t line;
+        if(args[0] == 0 ) { // eeprom script
+            eeprom_read_block( &line, &(ee_script_lines[args[1]]),
+                               sizeof(script_line_t));
+            I2Cwrite(line.dur);
+            I2Cwrite(line.cmd);
+            I2Cwrite(line.args[0]);
+            I2Cwrite(line.args[1]);
+            I2Cwrite(line.args[2]);
+        }
+        break;
+    case('B'):                 // set boot params: mode, script_id, reps, fadesp, timeadj
+            readI2CVals(5);
+            
+            eeprom_write_block( &(args[0]), // data starts from index 0
+                                &(ee_boot_mode),
+                                5);
             break;
-        case('f'):  // set fade speed
-        case('t'):  // set time adjust
-        case('l'):  // set ledn
-            // read ONE i2c val
-            readI2CVals(1);
-            player.handleCmd(cmd, args[0], 0, 0);
-            break;
-        case('n'):
-        case('c'):
-        case('C'):
-        case('h'):
-        case('H'):
-        case('p'):
-            // read THREE i2c vals
-            readI2CVals(3);
-            player.handleCmd(cmd, args[0],args[1],args[2]); 
-            break;
-        default:
-            break;
+        
+    default:
+        break;
     }
 }
 

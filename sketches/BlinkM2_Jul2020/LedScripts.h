@@ -12,9 +12,9 @@
 
 // R,G,B,R,G,B,....
 const script_line_t script_rgb[] PROGMEM = {
-    { 50, {'c', {0xf1,0x00,0x00} } },  //cmd, r,g,b
-    { 50, {'c', {0x00,0xf3,0x00} } },
-    { 50, {'c', {0x00,0x00,0xf5} } },
+    { 50, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
+    { 50, {'c', {0x00,0xff,0x00} } },
+    { 50, {'c', {0x00,0x00,0xff} } },
 };
 
 // white blink on & off
