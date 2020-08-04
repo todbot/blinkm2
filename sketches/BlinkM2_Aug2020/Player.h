@@ -5,31 +5,30 @@
 
 #include "BlinkMTypes.h"
 
+// In a past life, faders were dynamically-allocated, based off which LEDs
+// needed fading. For now, every LED gets a fader
 const int faderMax = NUM_LEDS;
 
 class Player
 {
-    uint8_t nLEDs; // number of LEDs in strip
-
-    rgb_t* leds; // pointer to real LED array in global memory
+    uint8_t nLEDs;       // number of LEDs in strip
+    rgb_t* leds;         // pointer to real LED array in global memory
 
     bool playing;
-    //callback_t stripUpdater;
 
-    uint8_t tick; // 1/100th ticks
-    //uint32_t tickUpdateNext;
-
-    uint8_t scriptTick;
+    uint8_t tick;        // 1/100th ticks
+    
+    uint8_t scriptTick;  // player script state
     uint8_t scriptId;
     uint8_t scriptLen;
     uint8_t scriptReps;
     uint8_t playPos;
 
-    uint8_t cmd;     // cmd currently being worked on (from i2c or script)
-    uint8_t args[3]; // args for cmd
-    uint8_t dur;     // duration of this command
+    uint8_t cmd;          // cmd currently being worked on (from i2c/script)
+    uint8_t args[3];      // args for cmd
+    uint8_t dur;          // duration of this command
    
-    uint8_t ledn; // current led to operate on, 0= all, 1st led = 1, 2nd = 2, ...
+    uint8_t ledn; // current led to operate on, 0=all, 1st LED=1, 2nd=2, ...
     uint8_t brightness;
     
     // fader logic consists of array of 'ledn' (ids of which LED to modify)
@@ -44,7 +43,9 @@ class Player
     uint8_t fadespeed;
     int8_t timeadj;
 
-    uint8_t hue, sat, bri;
+    uint8_t hue;  // HSV, for when HSV is used. not sure we need this
+    uint8_t sat;
+    uint8_t bri;
     
  public:
     Player(rgb_t* pleds, uint8_t nnLEDs )

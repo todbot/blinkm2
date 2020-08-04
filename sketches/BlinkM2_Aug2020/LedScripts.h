@@ -162,50 +162,63 @@ const script_line_t script_stoplight[] PROGMEM = {
 
 
 
-const script_line_t  script_rgb_test[] PROGMEM = {
-    { 1,  {'b', {0x2f,0x00,0x00} } },  //
-    { 25, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
-    { 25, {'c', {0x00,0xff,0x00} } },
-    { 25, {'c', {0x00,0x00,0xff} } },
-    { 25, {'c', {0xff,0xff,0xff} } },
-    { 10,  {'b', {0xa0,0x00,0x00} } },  //
-    { 10,  {'b', {0x80,0x00,0x00} } },  //
-    { 10,  {'b', {0x60,0x00,0x00} } },  //
-    { 10,  {'b', {0x40,0x00,0x00} } },  //
-    { 10,  {'b', {0x10,0x00,0x00} } },  //
-    { 50, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
-    { 50, {'c', {0x00,0xff,0x00} } },
-    { 50, {'c', {0x00,0x00,0xff} } },
-//  { 50, {'n', {0xff,0xff,0xff} } },
-    { 50, {'n', {0x01,0x01,0x01} } },
-    { 50, {'.', {1,0,0}}},              // set ledn to 1
-    { 50, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
-    { 50, {'c', {0x00,0xff,0x00} } },
-    { 50, {'c', {0x00,0x00,0xff} } },
-    { 50, {'.', {2,0,0}}},              // set ledn to 2
-    { 50, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
-    { 50, {'c', {0x00,0xff,0x00} } },
-    { 50, {'c', {0x00,0x00,0xff} } },
-    { 1,  {'.', {0,0,0  } } },
-    
-    // { 50, {'c', .args.r=0xff, .args.g=0x00, .args.b=0x00}}
-    // { 50, {'c', .args= {0xff,0x00, 0x00} } }
-    // { 50, {'c', rgb(0xff,0x00,0x00) } }
-    // { 50, {'c', {.colr.r=0xff, .colr.g=0x00, .colr.b=0x00} } }
-    // { 50, {'c', {.r=0xff, .g=0x00, .b=0x00} } }
-};
+const script_line_t  script_rgb_test[] PROGMEM =
+    {
+     { 1,  {'b', {0x2f,0x00,0x00} } },  //
+     { 26, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
+     { 27, {'c', {0x00,0xff,0x00} } },
+     { 28, {'c', {0x00,0x00,0xff} } },
+     { 29, {'c', {0xff,0xff,0xff} } },
+     { 10, {'b', {0xa0,0x00,0x00} } },  //
+     { 10, {'b', {0x80,0x00,0x00} } },  //
+     { 10, {'b', {0x60,0x00,0x00} } },  //
+     { 10, {'b', {0x40,0x00,0x00} } },  //
+     { 10, {'b', {0x10,0x00,0x00} } },  //
+     { 50, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
+     { 50, {'c', {0x00,0xff,0x00} } },
+     { 50, {'c', {0x00,0x00,0xff} } },
+     //  { 50, {'n', {0xff,0xff,0xff} } },
+     { 50, {'n', {0x01,0x01,0x01} } },
+     { 50, {'.', {1,0,0         } } }, // set ledn to 1
+     { 50, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
+     { 50, {'c', {0x00,0xff,0x00} } },
+     { 50, {'c', {0x00,0x00,0xff} } },
+     { 50, {'.', {2,0,0}}},              // set ledn to 2
+     { 50, {'c', {0xff,0x00,0x00} } },  //cmd, r,g,b
+     { 50, {'c', {0x00,0xff,0x00} } },
+     { 50, {'c', {0x00,0x00,0xff} } },
+     { 1,  {'.', {0,0,0         } } },
+     
+     // { 50, {'c', .args.r=0xff, .args.g=0x00, .args.b=0x00}}
+     // { 50, {'c', .args= {0xff,0x00, 0x00} } }
+     // { 50, {'c', rgb(0xff,0x00,0x00) } }
+     // { 50, {'c', {.colr.r=0xff, .colr.g=0x00, .colr.b=0x00} } }
+     // { 50, {'c', {.r=0xff, .g=0x00, .b=0x00} } }
+    };
 
 
 
-const script_line_t script_blinkm_default[] PROGMEM = {
-      // dur, cmd,  arg1,arg2,arg3
-//    {   1, {'f', {  10,0x00,0x00}}}, // set color_step (fade speed) to 15
-      { 100, {'c', {0xff,0xff,0xff}}},
-      { 50,  {'c', {0xff,0x00,0x00}}},
-      { 50,  {'c', {0x00,0xff,0x00}}},
-      { 50,  {'c', {0x00,0x00,0xff}}},
-      { 50,  {'c', {0x00,0x00,0x00}}}
-};
+const script_line_t script_blinkm_default[] PROGMEM =
+    {
+     // dur, cmd,  arg1,arg2,arg3
+     //    {   1, {'f', {  10,0x00,0x00}}}, // set color_step (fade speed) to 15
+     { 51,  {'c', {200, 200,200 }}},
+     { 52,  {'c', {201,   0,  0 }}},
+     { 53,  {'c', {  0, 202,  0 }}},
+     { 54,  {'c', {  0,   0,203 }}},
+     { 55,  {'c', {  2,   4,  6 }}},
+    };
+
+const script_line_t script_blinkm_default_real[] PROGMEM =
+    {
+     // dur, cmd,  arg1,arg2,arg3
+     //    {   1, {'f', {  10,0x00,0x00}}}, // set color_step (fade speed) to 15
+     { 100, {'c', {0xff,0xff,0xff}}},
+     { 50,  {'c', {0xff,0x00,0x00}}},
+     { 50,  {'c', {0x00,0xff,0x00}}},
+     { 50,  {'c', {0x00,0x00,0xff}}},
+     { 50,  {'c', {0x00,0x00,0x00}}}
+    };
 
 
 // PUT THESE IN RAM FOR NOW
@@ -235,25 +248,28 @@ const script_line_t* const scripts[] PROGMEM = {
 
 // this is so lame, but can't create a flexible array of patternlines in a struct in C++
 const uint8_t script_lengths[] PROGMEM =  {
-     ARRAY_SIZE( script_rgb ), 
-     ARRAY_SIZE( script_blink_white ),
-     ARRAY_SIZE( script_blink_red ),
-     ARRAY_SIZE( script_blink_green ),
-     ARRAY_SIZE( script_blink_blue ),
-     ARRAY_SIZE( script_blink_cyan ),
-     ARRAY_SIZE( script_blink_yellow ),
-     ARRAY_SIZE( script_black ),
-     ARRAY_SIZE( script_hue_cycle ),
-     ARRAY_SIZE( script_randmood ),
-     ARRAY_SIZE( script_candle ),
-     ARRAY_SIZE( script_water ),
-     ARRAY_SIZE( script_oldneon ),
-     ARRAY_SIZE( script_seasons ),
-     ARRAY_SIZE( script_thunderstorm ),
-     ARRAY_SIZE( script_stoplight ),
+     ARRAY_SIZE( script_rgb ),           // 1
+     ARRAY_SIZE( script_blink_white ),   // 2
+     ARRAY_SIZE( script_blink_red ),     // 3
+     ARRAY_SIZE( script_blink_green ),   // 4
+     ARRAY_SIZE( script_blink_blue ),    // 5
+     ARRAY_SIZE( script_blink_cyan ),    // 6
+     ARRAY_SIZE( script_blink_yellow ),  // 7
      
-     ARRAY_SIZE( script_rgb_test ),
-     ARRAY_SIZE( script_blinkm_default ),
+     ARRAY_SIZE( script_black ),         // 8
+     ARRAY_SIZE( script_hue_cycle ),     // 9
+     ARRAY_SIZE( script_randmood ),      // 10
+     ARRAY_SIZE( script_candle ),        // 11
+     ARRAY_SIZE( script_water ),         // 12
+     ARRAY_SIZE( script_oldneon ),       // 13
+     ARRAY_SIZE( script_seasons ),       // 14
+     ARRAY_SIZE( script_thunderstorm ),  // 15
+     ARRAY_SIZE( script_stoplight ),     // 16
+     
+     ARRAY_SIZE( script_rgb_test ),      // 17
+     ARRAY_SIZE( script_blinkm_default ),// 18
 };
+
+#define SCRIPT_DEFAULT_EE 18 // must match last line above
 
 #endif

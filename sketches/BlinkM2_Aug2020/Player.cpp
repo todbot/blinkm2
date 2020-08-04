@@ -12,12 +12,17 @@
  *
  */
      
+#include "Arduino.h"
+
 #include "Player.h"
 #include "LedScripts.h"
 
-#include "Arduino.h"
-
 #include "utils.h"
+
+// FIXME: don't like either of these
+#include <avr/eeprom.h>
+
+extern script_line_t EEMEM ee_script_lines[];
 
 
 // run faders, only first 0..faderMax LEDs have faders
@@ -28,6 +33,7 @@ void Player::doFaders()
         leds[i].slideTowards(led_dests[i], fadespeed);
     }
 #else
+    // old way
     for( int i=0; i< nLEDs; i++) { 
         rgb_t l = leds[i];   // current value
         rgb_t ld = led_dests[i]; // destination value
@@ -89,7 +95,7 @@ void Player::update(void)
 // Given a script id, return the length of that script
 uint8_t getScriptLen(uint8_t scriptId)
 {
-    uint8_t len = 16; // default max for EEPROM  FIXME
+    uint8_t len = patt_max; // default max for EEPROM  FIXME
     if( scriptId > 0 ) {
         //len = script_lengths[scriptId-1]; // RAM
         len = pgm_read_byte( &script_lengths[scriptId-1] );
@@ -118,8 +124,8 @@ void Player::playNextScriptLine()
 {
     script_line_t script_curr; 
     if( scriptId == 0 ) {   // eeprom
-        // eeprom_read_block( &script_curr, &ee_script_lines[playPos],
-        //                     sizeof(script_line_t));
+        eeprom_read_block( &script_curr, &ee_script_lines[playPos],
+                           sizeof(script_line_t));
     }
     else {                  // flash
         // first get pointer to scriptline set
@@ -153,7 +159,7 @@ void Player::handleCmd()
 {
     dbg("handleCmd:");
     dbg(scriptId); dbg(':'); dbg(dur); dbg(':'); dbg(playPos); dbg('/'); dbg(scriptLen);
-    dbg("  cmd:"); dbg(cmd); dbg(" args:"); dbg(args[0]); dbg(","); dbg(args[1]); dbg(","); dbg(args[2]);
+    dbg("  cmd:"); dbg((char)cmd); dbg(" args:"); dbg(args[0]); dbg(","); dbg(args[1]); dbg(","); dbg(args[2]);
     dbgln();
     //dbg("freeMem:"); dbgln(freeMemory());
 
@@ -270,7 +276,7 @@ void Player::handleCmd()
     case 'o':                 // stop playback
         stop();
         break;
-        
+
     }
 }
 
@@ -359,34 +365,3 @@ void Player::off()
 //                           colorSlide( l.b, ld.b, fadespeed) );
 // }
 
-/*
-#define FASTLED_SCALE8_FIXED 1
-typedef uint8_t   fract8;   ///< ANSI: unsigned short _Fract
-///  scale one byte by a second one, which is treated as
-///  the numerator of a fraction whose denominator is 256
-///  In other words, it computes i * (scale / 256)
-static inline uint8_t scale8( uint8_t i, fract8 scale)
-{
-#if (FASTLED_SCALE8_FIXED == 1)
-    return (((uint16_t)i) * (1+(uint16_t)(scale))) >> 8;
-#else
-    return ((uint16_t)i * (uint16_t)(scale) ) >> 8;
-#endif
-}
-/// linear interpolation between two unsigned 8-bit values,
-/// with 8-bit fraction
-static inline uint8_t lerp8by8( uint8_t a, uint8_t b, fract8 frac)
-{
-    uint8_t result;
-    if( b > a) {
-        uint8_t delta = b - a;
-        uint8_t scaled = scale8( delta, frac);
-        result = a + scaled;
-    } else {
-        uint8_t delta = a - b;
-        uint8_t scaled = scale8( delta, frac);
-        result = a - scaled;
-    }
-    return result;
-}
-*/

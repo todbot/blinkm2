@@ -3,34 +3,10 @@
 
 #include <stdint.h>
 
-      
-//__attribute__ ((always_inline)) static inline uint8_t colorSlide( uint8_t curr, uint8_t dest, uint8_t step )
-static uint8_t colorSlide( uint8_t curr, uint8_t dest, uint8_t step )
-{
-    int diff = curr - dest;
-    if(diff < 0)  diff = -diff;
+#include "utils.h" // can't because needs hsv_t
 
-    if( diff <= step ) return dest;
-    if( curr == dest ) return dest;
-    else if( curr < dest ) return curr + step;
-    else                   return curr - step;
-}
-
-/// (from FastLED)
-/// scale three one byte values by a fourth one, which is treated as
-///         the numerator of a fraction whose demominator is 256
-///         In other words, it computes r,g,b * (scale / 256), ensuring
-/// that non-zero values passed in remain non zero, no matter how low the scale
-/// argument.
-///
-///         THIS FUNCTION ALWAYS MODIFIES ITS ARGUMENTS IN PLACE
-static void fl_nscale8x3_video( uint8_t& r, uint8_t& g, uint8_t& b, uint8_t scale)
-{
-    uint8_t nonzeroscale = (scale != 0) ? 1 : 0;
-    r = (r == 0) ? 0 : (((int)r * (int)(scale) ) >> 8) + nonzeroscale;
-    g = (g == 0) ? 0 : (((int)g * (int)(scale) ) >> 8) + nonzeroscale;
-    b = (b == 0) ? 0 : (((int)b * (int)(scale) ) >> 8) + nonzeroscale;
-}
+//extern static uint8_t colorSlide( uint8_t curr, uint8_t dest, uint8_t step );
+//extern static void fl_nscale8x3_video( uint8_t& r, uint8_t& g, uint8_t& b, uint8_t scale);
 
 /// Representation of an HSV pixel (hue, saturation, value (aka brightness)).
 struct hsv_t {
@@ -150,15 +126,19 @@ struct rgb_t {
     }
 };
 
+//
+// A line in a BlinkM color script
+// An array of these makes up a script (along with meta info like len, reps)
+//
 struct script_line_t {
     uint8_t dur; // in ticks of 1/30sec
     struct {
         uint8_t cmd;
         union {
-            struct { uint8_t r; uint8_t g; uint8_t b; }; // as color triplet
-            uint8_t args[3];  // as unsigned array
-            struct { int8_t a0; int8_t a1; int8_t a2; }; // if arbitrary args
-            int8_t iargs[3];  // as signed array    FIXME all this is overkill
+            struct { uint8_t r; uint8_t g; uint8_t b; }; // as RGB color triplet
+            uint8_t args[3];                             // as unsigned array
+            struct { int8_t a0; int8_t a1; int8_t a2; }; // as arbitrary args
+            // int8_t iargs[3];  // as signed array    FIXME all this is overkill
         };
     };
 };
@@ -182,4 +162,4 @@ inline __attribute__((always_inline)) bool operator!= (const rgb_t& lhs, const r
 typedef void(* callback_t )(void);
 
 
-#endif
+#endif // BLINKMTYPES
