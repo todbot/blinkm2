@@ -12,9 +12,6 @@
  * - Light_WS2812_AVR - https://github.com/cpldcpu/light_ws2812
  * - TimerOne - https://github.com/PaulStoffregen/TimerOne (must use github version, not Library Manager)
  *
- * ATtiny85 static resource use:
- * - 20200731 : 4686 bytes flash / 295 bytes RAM  
- *
  * ATtiny85 configuration:  Arduino IDE 1.8.3 / ATTinyCore 1.4.0 
  * - Board: ATtiny85 (no bootloader)
  * - Chip: ATtiny85
@@ -24,6 +21,11 @@
  * - Timer 1 Clock: CPU (CPU frequency)
  * - LTO: Enabled
  * - millis()/micros(): Enabled
+ *
+ * ATtiny85 static resource use:
+ * - 20200731: 4686 bytes flash / 295 bytes RAM - basic functionalty, no eeprom
+ * - 20200804: 5730 bytes flash / 304 bytes RAM - eeprom read/write, some rearch
+ * - 20200804: 5712 bytes flash / 304 bytes RAM - eeprom config struct
  *
  */
 
@@ -46,24 +48,27 @@ const int misoPin = MISO_PIN;
 const int sdaPin  = SDA_PIN;
 const int ledPin  = LED_PIN;
 
-uint8_t ee_i2c_addr         EEMEM; // = I2C_ADDR_DEFAULT;
-uint8_t ee_boot_id          EEMEM; // = EEPROM_BOOT_ID;
-uint8_t ee_boot_mode        EEMEM; // = 0x00; // FIXME: BOOT_PLAY_SCRIPT;
-uint8_t ee_boot_script_id   EEMEM; // = 0x00;
-uint8_t ee_boot_reps        EEMEM; // = 0x00;
-uint8_t ee_boot_fadespeed   EEMEM; // = 0x07;
-uint8_t ee_boot_timeadj     EEMEM; // = 0x00;
-uint8_t ee_boot_brightness  EEMEM; // = 0x25;
-uint8_t ee_unused2          EEMEM; // = 0xDA;
+struct blinkm_config {
+    uint8_t i2c_addr;
+    uint8_t boot_id;
+    uint8_t boot_mode;
+    uint8_t script_id;
+    uint8_t reps;
+    uint8_t fadespeed;
+    uint8_t timeadj;
+    uint8_t brightness;
+    uint8_t unused;
+};
+
+blinkm_config EEMEM ee_config;
 
 //script_line_t ee_script_lines[patt_max] EEMEM;
 script_line_t EEMEM ee_script_lines[patt_max];
 
 // NOTE: Declaring EEPROM statically doesn't do anyting because the Arduino
 //        loader doesn't burn eeprom when flashing device
-// IDEA: Check EEPROM id and load EEPROM from flash if not set  DONE
-// IDEA: Can we "compress" the script into eeprom, decompress into RAM?
 
+// This ID value must match ee_config.boot_id or EEPROM is invalid and will be reloaded
 #define EEPROM_BOOT_ID 0xB1
 
 // FIXME: make this an enum
@@ -81,8 +86,8 @@ uint8_t outcount = 0;  // num bytes to send
 uint8_t inputs[2];
 script_line_t linetmp;
 
-// 
-rgb_t leds[NUM_LEDS];
+// The buffer that is written to the LEDs
+rgb_t leds[NUM_LEDS];  
 
 // Player does all the hard work
 Player player(leds, NUM_LEDS);
@@ -92,53 +97,40 @@ Player player(leds, NUM_LEDS);
 void setup()
 {
     dbg_start();
+    dbgln("BlinkM2!");
 
     pinMode(ledPin, OUTPUT);
     //pinMode(a0Pin, INPUT_PULLUP);
     //pinMode(a1Pin, INPUT_PULLUP);
     //pinMode(misoPin, INPUT_PULLUP);
+   
+    blinkm_config config;
+    eeprom_load_config(&config);
 
-#if defined(__BLINKM_DEV__)
-    delay(2000);  // for debug
-    dbgln("in setup!");
-#endif
-    
-    uint8_t boot_id        = eeprom_read_byte( &ee_boot_id );
-    dbg("EEPROM boot id: "); dbgln(boot_id);
-    
-    //if( 1 ) {
-    if( boot_id != EEPROM_BOOT_ID ) { // is magic value valid?
+    if( config.boot_id != EEPROM_BOOT_ID ) { // is magic value valid?
         dbgln("*** Resetting EEPROM to defaults ***");
-        eeprom_reset_vals();
+        eeprom_reset_config();
+        eeprom_reset_script();
     }
-    eeprom_reset_script();
     
-    // set up
-    uint8_t i2c_addr       = eeprom_read_byte( &ee_i2c_addr ); 
-    uint8_t boot_mode      = eeprom_read_byte( &ee_boot_mode );
-    uint8_t boot_script_id = eeprom_read_byte( &ee_boot_script_id );
-    uint8_t boot_reps      = eeprom_read_byte( &ee_boot_reps );
-    uint8_t boot_fadespeed = eeprom_read_byte( &ee_boot_fadespeed );
-    uint8_t boot_timeadj   = eeprom_read_byte( &ee_boot_timeadj );
-    uint8_t boot_brightness= eeprom_read_byte( &ee_boot_brightness );
-    
-    // initialize i2c interface 
-    if( i2c_addr==0 || i2c_addr>0x7f) {
-        i2c_addr = I2C_ADDR_DEFAULT;
+    // initialize i2c interface, ensuring good addr
+    if( config.i2c_addr==0 || config.i2c_addr>0x7f) {
+        config.i2c_addr = I2C_ADDR_DEFAULT;
     }
 
-    i2cSetup( i2c_addr );
+    i2cSetup( config.i2c_addr );
     
     // initialize Timer1 periodic timer for player
     Timer1.initialize(10000); // every 10 millis
     Timer1.attachInterrupt(updatePlayer);
 
-    player.setFadespeed(boot_fadespeed);
+    // initialize Player object
+    player.setFadespeed(config.fadespeed);
+    player.setBrightness(config.brightness);
     player.setInputs(inputs);
-    player.setBrightness(boot_brightness);
     
-    if( boot_mode == BOOT_PLAY_SCRIPT ) {
-        player.playScript( boot_script_id, boot_reps, 0 ); // FIXME: do real startup behavior
+    if( config.boot_mode == BOOT_PLAY_SCRIPT ) {
+        player.playScript( config.script_id, config.reps, 0 ); // FIXME: do real startup behavior
     }
     
     dbgln("setup done");
@@ -211,7 +203,8 @@ void handleI2C()
         break;
     case('a'):                // get i2c address
         // no args, returns 1 val
-        outvals[0] = eeprom_read_byte(&ee_i2c_addr);
+        //outvals[0] = eeprom_read_byte(&ee_i2c_addr);
+        outvals[0] = eeprom_read_byte(&ee_config.i2c_addr);
         outcount = 1;
         break;
     case('A'):                // set i2c address
@@ -219,7 +212,8 @@ void handleI2C()
         // FIXME
         if( cmdargs[1] != 0 && cmdargs[1] == cmdargs[4] &&
             cmdargs[2] == 0xD0 && cmdargs[3] == 0x0D ) {  //
-            eeprom_write_byte( &ee_i2c_addr, cmdargs[1] ); // write address
+            //eeprom_write_byte( &ee_i2c_addr, cmdargs[1] ); // write address
+            eeprom_write_byte( &ee_config.i2c_addr, cmdargs[1] ); // write address
             i2cSetup( cmdargs[1] );
         }
         break;
@@ -248,11 +242,10 @@ void handleI2C()
         break;
         
     case('B'):                 // set boot params: mode, script_id, reps, fadesp, timeadj
-        //readI2CVals(5);
-            
-            /* eeprom_write_block( &(args[0]), // data starts from index 0 */
-            /*                     &(ee_boot_mode), */
-            /*                     5); */
+        // command with 5 args
+        eeprom_write_block( &cmdargs[1], // data starts from arg index 1 
+                            &ee_config.boot_mode, // start from boot_mode
+                            5); // copy 5 bytes
         break;
         
     case('@'):                 // return free memory
@@ -299,20 +292,44 @@ void checkInputs()
     // // FIXME: verify doesn't mess up i2c
 }
 
+// -------------------------------------------------------------
+
+
+//
+//
+//
+void eeprom_load_config(blinkm_config*config)
+{
+    eeprom_read_block( config, &ee_config, sizeof(blinkm_config));
+
+    dbgln("eeprom config:");
+    dbg(" i2c_addr:  "); dbgln(config->i2c_addr);
+    dbg(" boot_id:   "); dbgln(config->boot_id);
+    dbg(" boot_mode: "); dbgln(config->boot_mode);
+    dbg(" script_id: "); dbgln(config->script_id);
+    dbg(" fadespeed: "); dbgln(config->fadespeed);
+    dbg(" timeadj:   "); dbgln(config->timeadj);
+    dbg(" brightness:"); dbgln(config->brightness);
+}
 
 //
 // FIXME: magic values below
 //
-void eeprom_reset_vals()
+void eeprom_reset_config()
 {
-    eeprom_write_byte( &ee_i2c_addr,        I2C_ADDR_DEFAULT ); // write address
-    eeprom_write_byte( &ee_boot_id,         EEPROM_BOOT_ID );
-    eeprom_write_byte( &ee_boot_mode,       BOOT_PLAY_SCRIPT );
-    eeprom_write_byte( &ee_boot_script_id,  0 ); //17; // FIXME TESTING
-    eeprom_write_byte( &ee_boot_reps,       0 );
-    eeprom_write_byte( &ee_boot_fadespeed,  6 ); //8;
-    eeprom_write_byte( &ee_boot_timeadj,    0 );
-    eeprom_write_byte( &ee_boot_brightness, 255); //25; // 255
+    const blinkm_config defaults =
+        {
+         .i2c_addr  = I2C_ADDR_DEFAULT,
+         .boot_id   = EEPROM_BOOT_ID,
+         .boot_mode = BOOT_PLAY_SCRIPT,
+         .script_id = 0,
+         .reps      = 0,
+         .fadespeed = 6,
+         .timeadj   = 0,
+         .brightness= 255
+        };
+    
+    eeprom_write_block( &defaults, &ee_config, sizeof(blinkm_config));
 }
 
 //
@@ -344,31 +361,3 @@ void eeprom_reset_script()
     }
 
 }
-
-/*
-//
-//
-//
-void eeprom_reset_script_bad()
-{
-    dbgln("*** eeprom_reset_script *** ");
-    uint8_t scriptId = 18; // FIXME
-    uint8_t script_len = pgm_read_byte( &script_lengths[scriptId-1] );
-    dbg("script_len:"); dbgln(script_len);
-    
-    #define sr linetmp
-    script_line_t* sl = pgm_read_ptr( &scripts[scriptId-1] );
-    // first get pointer to scriptline set
-    dbg("sl: dur,cmd,a0: "); dbg(sl->dur); dbg(','); dbg(sl->cmd); dbg(','); dbgln(sl->args[0]);
-    for( int i = 0; i< script_len; i++ ) { 
-
-        //memcpy_P( &linetmp, sl+i, sizeof(script_line_t));
-
-        //dbg("sr: dur,cmd,args: "); dbg(sr.dur); dbg(','); dbg(sr.cmd); dbg(',');
-        //dbg(sr.args[0]); dbg(','); dbg(sr.args[1]); dbg(','); dbg(sr.args[2]); dbgln();
-        
-        eeprom_write_block( sl+i, &ee_script_lines[i], sizeof(script_line_t) );
-    }
-
-}
-*/

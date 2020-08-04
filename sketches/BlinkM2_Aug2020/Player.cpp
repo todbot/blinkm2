@@ -22,6 +22,7 @@
 // FIXME: don't like either of these
 #include <avr/eeprom.h>
 
+// FIXME:
 extern script_line_t EEMEM ee_script_lines[];
 
 
@@ -118,7 +119,6 @@ void Player::playScript(uint8_t scriptid, uint8_t reps, uint8_t pos)
     playNextScriptLine();
 }
 
-
 //
 void Player::playNextScriptLine()
 {
@@ -135,7 +135,7 @@ void Player::playNextScriptLine()
         // read actual script line
         memcpy_P(&script_curr, sl, sizeof(script_line_t));
     }
-    
+
     cmd     = script_curr.cmd;
     args[0] = script_curr.args[0];
     args[1] = script_curr.args[1];
