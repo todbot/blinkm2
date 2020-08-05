@@ -23,6 +23,7 @@
 #include <avr/eeprom.h>
 
 // FIXME:
+extern blinkm_config EEMEM ee_config;
 extern script_line_t EEMEM ee_script_lines[];
 
 
@@ -96,18 +97,21 @@ void Player::update(void)
 // Given a script id, return the length of that script
 uint8_t getScriptLen(uint8_t scriptId)
 {
-    uint8_t len = patt_max; // default max for EEPROM  FIXME
-    if( scriptId > 0 ) {
+    uint8_t len = 0;
+    if( scriptId == 0 ) {
+        len = eeprom_read_byte( &ee_config.script_len );
+    }
+    else {
         //len = script_lengths[scriptId-1]; // RAM
         len = pgm_read_byte( &script_lengths[scriptId-1] );
-        dbg("len:"); dbgln(len);
-        if( len==0 || len > 16 ) len = 16;
     }
+    //if( len==0 || len > 16 ) len = 16;
+    dbg("len:"); dbgln(len);
     return len;
 }
 
 //
-void Player::playScript(uint8_t scriptid, uint8_t reps, uint8_t pos)
+void Player::playScript(uint8_t scriptid, uint8_t reps, uint8_t pos )
 {
     dbg("playScript:"); dbg(scriptid); dbg(','); dbg(reps); dbg(','); dbgln(pos);
     scriptId = scriptid;
@@ -130,8 +134,7 @@ void Player::playNextScriptLine()
     else {                  // flash
         // first get pointer to scriptline set
         script_line_t* sl = pgm_read_ptr( &scripts[scriptId-1] );
-        // ofset pointer to current play position
-        sl += playPos;
+        sl += playPos;         // ofset pointer to current play position
         // read actual script line
         memcpy_P(&script_curr, sl, sizeof(script_line_t));
     }

@@ -9,7 +9,7 @@
 const int NUM_LEDS = 32;
 const int patt_max = 16;
 const int I2C_ADDR_DEFAULT = 0x19;
-
+const int EE_SCRIPT_LEN_MAX = 48;
 
 #if defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny85__)  //
 #define __BLINKM_BOARD__
@@ -22,7 +22,7 @@ const int I2C_ADDR_DEFAULT = 0x19;
 #define dbg(x)
 #define dbgln(x)
 #else
-//#warning "building for BLINKM DEVELOPMENT"
+#warning "building for BLINKM DEVELOPMENT"
 #define dbg_start() do {Serial.begin(115200);Serial.println("dbg_start");} while(0)
 #define dbg(x) Serial.print(x)
 #define dbgln(x) Serial.println(x)

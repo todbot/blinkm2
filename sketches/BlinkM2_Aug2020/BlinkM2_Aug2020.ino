@@ -48,18 +48,6 @@ const int misoPin = MISO_PIN;
 const int sdaPin  = SDA_PIN;
 const int ledPin  = LED_PIN;
 
-struct blinkm_config {
-    uint8_t i2c_addr;
-    uint8_t boot_id;
-    uint8_t boot_mode;
-    uint8_t script_id;
-    uint8_t reps;
-    uint8_t fadespeed;
-    uint8_t timeadj;
-    uint8_t brightness;
-    uint8_t unused;
-};
-
 blinkm_config EEMEM ee_config;
 
 //script_line_t ee_script_lines[patt_max] EEMEM;
@@ -69,7 +57,7 @@ script_line_t EEMEM ee_script_lines[patt_max];
 //        loader doesn't burn eeprom when flashing device
 
 // This ID value must match ee_config.boot_id or EEPROM is invalid and will be reloaded
-#define EEPROM_BOOT_ID 0xB1
+#define EEPROM_BOOT_ID 0xB2
 
 // FIXME: make this an enum
 // possible values for boot_mode
@@ -97,8 +85,11 @@ Player player(leds, NUM_LEDS);
 void setup()
 {
     dbg_start();
+#if defined(__BLINKM_DEV__)
+    delay(1000);
     dbgln("BlinkM2!");
-
+#endif
+    
     pinMode(ledPin, OUTPUT);
     //pinMode(a0Pin, INPUT_PULLUP);
     //pinMode(a1Pin, INPUT_PULLUP);
@@ -130,7 +121,7 @@ void setup()
     player.setInputs(inputs);
     
     if( config.boot_mode == BOOT_PLAY_SCRIPT ) {
-        player.playScript( config.script_id, config.reps, 0 ); // FIXME: do real startup behavior
+        player.playScript( config.script_id, config.script_reps, config.script_pos ); // FIXME: script_len?
     }
     
     dbgln("setup done");
@@ -212,10 +203,15 @@ void handleI2C()
         // FIXME
         if( cmdargs[1] != 0 && cmdargs[1] == cmdargs[4] &&
             cmdargs[2] == 0xD0 && cmdargs[3] == 0x0D ) {  //
-            //eeprom_write_byte( &ee_i2c_addr, cmdargs[1] ); // write address
             eeprom_write_byte( &ee_config.i2c_addr, cmdargs[1] ); // write address
             i2cSetup( cmdargs[1] );
         }
+        break;
+    case('L'):            // set script length & repeats: script_id, len, reps
+        // command with 3 args (script_id, len, reps)
+        eeprom_write_byte( &ee_config.script_id,   cmdargs[1] );
+        eeprom_write_byte( &ee_config.script_len,  cmdargs[2] );
+        eeprom_write_byte( &ee_config.script_reps, cmdargs[3] );
         break;
     case('Z'):                // return protocol version
         // no args, returns 2 vals
@@ -227,18 +223,31 @@ void handleI2C()
         // command with 2 args (scriptid, pos), returns 5 vals
         if(cmdargs[1] == 0 ) { // eeprom script
             //eeprom_read_block( &line, (void*)ee_script_lines+0, sizeof(script_line_t) );
-            eeprom_read_block( &linetmp, (const void*)(&ee_script_lines[cmdargs[2]])  ,
+            eeprom_read_block( &linetmp, (const void*)(&ee_script_lines[ cmdargs[2] ])  ,
                                sizeof(script_line_t));
             dbgln(linetmp.cmd);
-            outvals[0] = linetmp.dur;
-            outvals[1] = linetmp.cmd;
-            outvals[2] = linetmp.args[0];
-            outvals[3] = linetmp.args[1];
-            outvals[4] = linetmp.args[2];
+            memcpy( &outvals, &linetmp, sizeof(script_line_t));
+            //outvals[0] = linetmp.dur;
+            //outvals[1] = linetmp.cmd;
+            //outvals[2] = linetmp.args[0];
+            //outvals[3] = linetmp.args[1];
+            //outvals[4] = linetmp.args[2];
             outcount = 5;
         }
+        else { // flash-based script
+            
+        }
         break;
-    case('W'):
+    case('W'):                // write a script line: id, pos, dur, cmd,arg1,arg2,arg3
+        // command with 7 args (script_id,pos,dur, cmd, arg1,arg2,arg3)
+        if( cmdargs[1] == 0 ) { // eeprom script
+            if( cmdargs[1] < EE_SCRIPT_LEN_MAX ) {
+                eeprom_write_block( &cmdargs[2], 
+                                    &ee_script_lines[ cmdargs[1] ],
+                                    sizeof(script_line_t));
+            } // else too big
+        } else {                // flash-based script
+        }
         break;
         
     case('B'):                 // set boot params: mode, script_id, reps, fadesp, timeadj
@@ -303,13 +312,16 @@ void eeprom_load_config(blinkm_config*config)
     eeprom_read_block( config, &ee_config, sizeof(blinkm_config));
 
     dbgln("eeprom config:");
-    dbg(" i2c_addr:  "); dbgln(config->i2c_addr);
-    dbg(" boot_id:   "); dbgln(config->boot_id);
-    dbg(" boot_mode: "); dbgln(config->boot_mode);
-    dbg(" script_id: "); dbgln(config->script_id);
-    dbg(" fadespeed: "); dbgln(config->fadespeed);
-    dbg(" timeadj:   "); dbgln(config->timeadj);
-    dbg(" brightness:"); dbgln(config->brightness);
+    dbg(" i2c_addr:   "); dbgln(config->i2c_addr);
+    dbg(" boot_id:    "); dbgln(config->boot_id);
+    dbg(" boot_mode:  "); dbgln(config->boot_mode);
+    dbg(" script_id:  "); dbgln(config->script_id);
+    dbg(" script_reps:"); dbgln(config->script_reps);
+    dbg(" fadespeed:  "); dbgln(config->fadespeed);
+    dbg(" timeadj:    "); dbgln(config->timeadj);
+    dbg(" brightness: "); dbgln(config->brightness);
+    dbg(" script_len: "); dbgln(config->script_len);
+    dbg(" script_pos: "); dbgln(config->script_pos);
 }
 
 //
@@ -319,14 +331,16 @@ void eeprom_reset_config()
 {
     const blinkm_config defaults =
         {
-         .i2c_addr  = I2C_ADDR_DEFAULT,
-         .boot_id   = EEPROM_BOOT_ID,
-         .boot_mode = BOOT_PLAY_SCRIPT,
-         .script_id = 0,
-         .reps      = 0,
-         .fadespeed = 6,
-         .timeadj   = 0,
-         .brightness= 255
+         .i2c_addr    = I2C_ADDR_DEFAULT,
+         .boot_id     = EEPROM_BOOT_ID,
+         .boot_mode   = BOOT_PLAY_SCRIPT,
+         .script_id   = 0,
+         .script_reps = 0,
+         .fadespeed   = 6,
+         .timeadj     = 0,
+         .brightness  = 255,
+         .script_len  = 5,
+         .script_pos  = 0,
         };
     
     eeprom_write_block( &defaults, &ee_config, sizeof(blinkm_config));
@@ -354,7 +368,7 @@ void eeprom_reset_script()
     }
 
     memset( &linetmp, 0, sizeof(script_line_t) );
-    for( int i=script_len; i<patt_max; i++ ) {
+    for( int i=script_len; i<EE_SCRIPT_LEN_MAX; i++ ) {
         eeprom_write_block( &linetmp, &ee_script_lines[i], sizeof(script_line_t) );
         dbg("  dur,cmd,args: "); dbg(linetmp.dur); dbg(','); dbg(linetmp.cmd); dbg(',');
         dbg(linetmp.args[0]); dbg(','); dbg(linetmp.args[1]); dbg(','); dbgln(linetmp.args[2]);

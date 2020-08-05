@@ -1,5 +1,5 @@
-#ifndef BLINKMTYPES_H
-#define BLINKMTYPES_H
+#ifndef BLINKM_TYPES_H
+#define BLINKM_TYPES_H
 
 #include <stdint.h>
 
@@ -7,6 +7,22 @@
 
 //extern static uint8_t colorSlide( uint8_t curr, uint8_t dest, uint8_t step );
 //extern static void fl_nscale8x3_video( uint8_t& r, uint8_t& g, uint8_t& b, uint8_t scale);
+
+// what's stored in EEPROM
+struct blinkm_config {
+    uint8_t i2c_addr;
+    uint8_t boot_id;
+    uint8_t boot_mode;
+    uint8_t script_id;
+    uint8_t script_reps;
+    uint8_t fadespeed;
+    uint8_t timeadj;
+    uint8_t brightness;
+    uint8_t script_len;
+    uint8_t script_pos;
+};
+
+
 
 /// Representation of an HSV pixel (hue, saturation, value (aka brightness)).
 struct hsv_t {
