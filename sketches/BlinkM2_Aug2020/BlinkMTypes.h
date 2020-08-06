@@ -3,25 +3,52 @@
 
 #include <stdint.h>
 
+#include "blinkm_config.h"
 #include "utils.h" // can't because needs hsv_t
 
 //extern static uint8_t colorSlide( uint8_t curr, uint8_t dest, uint8_t step );
 //extern static void fl_nscale8x3_video( uint8_t& r, uint8_t& g, uint8_t& b, uint8_t scale);
 
-// what's stored in EEPROM
+
+// config that's stored in EEPROM
 struct blinkm_config {
-    uint8_t i2c_addr;
-    uint8_t boot_id;
-    uint8_t boot_mode;
-    uint8_t script_id;
-    uint8_t script_reps;
-    uint8_t fadespeed;
-    uint8_t timeadj;
-    uint8_t brightness;
-    uint8_t script_len;
-    uint8_t script_pos;
+    uint8_t i2c_addr;    // 0
+    uint8_t boot_id;     // 1
+    uint8_t boot_mode;   // 2
+    uint8_t script_id;   // 3
+    uint8_t script_reps; // 4
+    uint8_t fadespeed;   // 5
+    uint8_t timeadj;     // 6
+    uint8_t brightness;  // 7
+    uint8_t script_len;  // 8
+    uint8_t script_pos;  // 9
 };
 
+//
+// A line in a BlinkM color script
+// An array of these makes up a script (along with meta info like len, reps)
+//
+struct script_line_t {
+    uint8_t dur; // in ticks of 1/30sec
+    struct {
+        uint8_t cmd;
+        union {
+            struct { uint8_t r; uint8_t g; uint8_t b; }; // as RGB color triplet
+            uint8_t args[3];                             // as unsigned array
+            struct { int8_t a0; int8_t a1; int8_t a2; }; // as arbitrary args
+            // int8_t iargs[3];  // as signed array    FIXME all this is overkill
+        };
+    };
+};
+
+//
+// layout of EEPROM memory
+// Needs to be in a struct so we can place stuff in exact locations
+//
+struct ee_mem { 
+    blinkm_config config;
+    script_line_t script_lines[EE_SCRIPT_LEN_MAX];
+};
 
 
 /// Representation of an HSV pixel (hue, saturation, value (aka brightness)).
@@ -142,22 +169,6 @@ struct rgb_t {
     }
 };
 
-//
-// A line in a BlinkM color script
-// An array of these makes up a script (along with meta info like len, reps)
-//
-struct script_line_t {
-    uint8_t dur; // in ticks of 1/30sec
-    struct {
-        uint8_t cmd;
-        union {
-            struct { uint8_t r; uint8_t g; uint8_t b; }; // as RGB color triplet
-            uint8_t args[3];                             // as unsigned array
-            struct { int8_t a0; int8_t a1; int8_t a2; }; // as arbitrary args
-            // int8_t iargs[3];  // as signed array    FIXME all this is overkill
-        };
-    };
-};
 
 inline __attribute__((always_inline)) bool operator== (const rgb_t& lhs, const rgb_t& rhs)
 {

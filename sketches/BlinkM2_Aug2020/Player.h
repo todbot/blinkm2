@@ -24,9 +24,10 @@ class Player
     uint8_t scriptReps;
     uint8_t playPos;
 
-    uint8_t cmd;          // cmd currently being worked on (from i2c/script)
-    uint8_t args[3];      // args for cmd
-    uint8_t dur;          // duration of this command
+    script_line_t line_cur;   // dur, cmd, args[3] of cmd currently being worked on
+    //uint8_t cmd;          // cmd currently being worked on (from i2c/script)
+    //uint8_t args[3];      // args for cmd
+    //uint8_t dur;          // duration of this command
    
     uint8_t ledn; // current led to operate on, 0=all, 1st LED=1, 2nd=2, ...
     uint8_t brightness;
@@ -67,9 +68,9 @@ class Player
     void setInputs( uint8_t* ins) { inputs = ins; }
     void setBrightness(uint8_t b) { brightness = b; }
     
-    void setCmd(uint8_t c) { cmd = c; }
+    void setCmd(uint8_t c) { line_cur.cmd = c; }
     void setArgs(uint8_t a, uint8_t b, uint8_t c) {
-        args[0] = a;  args[1] = b;  args[2] = c;
+        line_cur.args[0] = a;  line_cur.args[1] = b;  line_cur.args[2] = c;
     }
 
     void handleCmd();  // uses only cmd and args

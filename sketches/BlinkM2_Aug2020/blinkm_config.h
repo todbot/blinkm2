@@ -7,9 +7,21 @@
 
 
 const int NUM_LEDS = 32;
-const int patt_max = 16;
 const int I2C_ADDR_DEFAULT = 0x19;
-const int EE_SCRIPT_LEN_MAX = 48;
+const int EE_SCRIPT_LEN_MAX = 50 ;
+// EEPROM size = 512 bytes
+// ee_blinkm_config = 10 bytes
+// ee_script_lines = 5 bytes per line * 50 = 250 bytes 
+
+// This ID value must match ee_config.boot_id or EEPROM is invalid and will be reloaded
+#define EEPROM_BOOT_ID 0xB2
+
+// FIXME: make this an enum
+// possible values for ee_config.boot_mode
+#define BOOT_NOTHING     0
+#define BOOT_PLAY_SCRIPT 1
+#define BOOT_MODE_END    2
+
 
 #if defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny85__)  //
 #define __BLINKM_BOARD__

@@ -22,10 +22,7 @@
 // FIXME: don't like either of these
 #include <avr/eeprom.h>
 
-// FIXME:
-extern blinkm_config EEMEM ee_config;
-extern script_line_t EEMEM ee_script_lines[];
-
+extern ee_mem EEMEM ee;
 
 // run faders, only first 0..faderMax LEDs have faders
 void Player::doFaders()
@@ -68,7 +65,7 @@ void Player::update(void)
     }
 
     // FIXME: only place script_curr is used outside of loading line
-    if( scriptTick < dur ) { // ready to go to next line?
+    if( scriptTick < line_cur.dur ) { // ready to go to next line?
         return; // no
     }
     scriptTick = 0; // reset our ticker
@@ -99,7 +96,7 @@ uint8_t getScriptLen(uint8_t scriptId)
 {
     uint8_t len = 0;
     if( scriptId == 0 ) {
-        len = eeprom_read_byte( &ee_config.script_len );
+        len = eeprom_read_byte( &ee.config.script_len );
     }
     else {
         //len = script_lengths[scriptId-1]; // RAM
@@ -126,9 +123,9 @@ void Player::playScript(uint8_t scriptid, uint8_t reps, uint8_t pos )
 //
 void Player::playNextScriptLine()
 {
-    script_line_t script_curr; 
+    //script_line_t script_curr; 
     if( scriptId == 0 ) {   // eeprom
-        eeprom_read_block( &script_curr, &ee_script_lines[playPos],
+        eeprom_read_block( &line_cur, &ee.script_lines[playPos],
                            sizeof(script_line_t));
     }
     else {                  // flash
@@ -136,15 +133,15 @@ void Player::playNextScriptLine()
         script_line_t* sl = pgm_read_ptr( &scripts[scriptId-1] );
         sl += playPos;         // ofset pointer to current play position
         // read actual script line
-        memcpy_P(&script_curr, sl, sizeof(script_line_t));
+        memcpy_P(&line_cur, sl, sizeof(script_line_t));
     }
-
+    /*
     cmd     = script_curr.cmd;
     args[0] = script_curr.args[0];
     args[1] = script_curr.args[1];
     args[2] = script_curr.args[2];
     dur     = script_curr.dur;
-    
+    */
     handleCmd();
 }
 
@@ -161,22 +158,23 @@ void Player::handleCmd(uint8_t c, uint8_t a0, uint8_t a1, uint8_t a2)
 void Player::handleCmd()
 {
     dbg("handleCmd:");
-    dbg(scriptId); dbg(':'); dbg(dur); dbg(':'); dbg(playPos); dbg('/'); dbg(scriptLen);
-    dbg("  cmd:"); dbg((char)cmd); dbg(" args:"); dbg(args[0]); dbg(","); dbg(args[1]); dbg(","); dbg(args[2]);
+    dbg(scriptId); dbg(':'); dbg(line_cur.dur); dbg(':'); dbg(playPos); dbg('/'); dbg(scriptLen);
+    dbg("  cmd:"); dbg((char)line_cur.cmd);
+    dbg(" args:"); dbg(line_cur.args[0]); dbg(","); dbg(line_cur.args[1]); dbg(","); dbg(line_cur.args[2]);
     dbgln();
     //dbg("freeMem:"); dbgln(freeMemory());
 
     int i; rgb_t lastc, newc;
 
-    switch(cmd) {
+    switch(line_cur.cmd) {
     case '.':                 // set which LED to operate on  BLINKM2
-        dbg("@@@ ledn! "); dbgln(args[0]);
-        ledn = args[0]; 
+        //dbg("@@@ ledn! "); dbgln(args[0]);
+        ledn = line_cur.args[0]; 
         if( ledn >= nLEDs ) { ledn = 0; }
         break;
 
     case 'b':                 // set brightness               BLINKM2
-        brightness = args[0];
+        brightness = line_cur.args[0];
         /*
         for( int i=0; i<nLEDs; i++) {
             leds[i].dim(brightness);
@@ -193,7 +191,7 @@ void Player::handleCmd()
         break;
 
     case 'n':                 // set rgb color now
-        newc = rgb_t(args[0], args[1], args[2]);
+        newc = rgb_t(line_cur.args[0], line_cur.args[1], line_cur.args[2]);
         if( ledn == 0 ) {
             for( int i=0 ; i< nLEDs; i++) { 
                 leds[i] = led_dests[i] = newc;
@@ -205,7 +203,7 @@ void Player::handleCmd()
         break;
 
     case 'c':                 // fade to rgb color
-        newc = rgb_t(args[0], args[1], args[2]);
+        newc = rgb_t(line_cur.args[0], line_cur.args[1], line_cur.args[2]);
         newc.dim(brightness);
         if( ledn == 0 ) { // change all LEDs?
             for( int i=0 ; i< nLEDs; i++) { 
@@ -221,9 +219,9 @@ void Player::handleCmd()
         // fixme:
         i = (ledn==0) ? 0 : ledn-1;
         lastc = led_dests[i];
-        newc = rgb_t( get_rand_range(lastc.r, args[0]),
-                            get_rand_range(lastc.g, args[1]),
-                            get_rand_range(lastc.b, args[2]) );
+        newc = rgb_t( get_rand_range(lastc.r, line_cur.args[0]),
+                            get_rand_range(lastc.g, line_cur.args[1]),
+                            get_rand_range(lastc.b, line_cur.args[2]) );
         led_dests[i] = newc;
         dbg("lastc:");dbg(lastc.r);dbg(',');dbg(lastc.g);dbg(',');dbg(lastc.b);
         dbg(" newc:");dbg(newc.r);dbg(',');dbg(newc.g);dbg(',');dbg(newc.b); dbgln();        
@@ -231,16 +229,16 @@ void Player::handleCmd()
 
     case 'h':                 // fade to HSV
         uint8_t r,g,b;
-        hsvToRgb( args[0], args[1], args[2], &r, &g, &b);
+        hsvToRgb( line_cur.args[0], line_cur.args[1], line_cur.args[2], &r, &g, &b);
         led_dests[ledn] = rgb_t(r,g,b); // fixme: make better
         break;
 
     case 'H':                 // fade to random HSV
         i = (ledn==0) ? 0 : ledn-1;
         dbg("last hsv:");dbg(hue);dbg(',');dbg(sat);dbg(',');dbg(bri);
-        hue = get_rand_range( hue, args[0] );
-        sat = get_rand_range( sat, args[1] );
-        bri = get_rand_range( bri, args[2] );
+        hue = get_rand_range( hue, line_cur.args[0] );
+        sat = get_rand_range( sat, line_cur.args[1] );
+        bri = get_rand_range( bri, line_cur.args[2] );
         
         hsvToRgb( hue,sat,bri, &newc.r, &newc.g, &newc.b );
         led_dests[i] = newc;
@@ -248,35 +246,36 @@ void Player::handleCmd()
         break;
 
     case 'p':                 // play script
-        playScript( args[0], args[1], args[2] );
+        playScript( line_cur.args[0], line_cur.args[1], line_cur.args[2] );
         break;
         
     case 'f':                 // set fadespeed
-        fadespeed = args[0];
+        fadespeed = line_cur.args[0];
         break;
 
     case 't':                 // time adjust
-        timeadj = args[0];
+        timeadj = line_cur.args[0];
         break;
 
     case('T'):                // random time delay   // FIXME: test this
-        dur = get_rand_range( dur, args[0] );
+        line_cur.dur = get_rand_range( line_cur.dur, line_cur.args[0] );
         break;
 
-    case 'F':                 // change fade speed on input
+    case 'F':                 // change fade speed on input // FIXME:
+        
         break;
 
     case 'j':                 // jump back relative
-        playPos += args[0] - 1;        
+        playPos += line_cur.args[0] - 1;        
         break;
 
     case 'i':                // read inputs and act
-        if( inputs[ args[0] ] > args[1] ) {
-            playPos += args[2] - 1;
+        if( inputs[ line_cur.args[0] ] > line_cur.args[1] ) {
+            playPos += line_cur.args[2] - 1;
         }
         break;
 
-    case 'o':                 // stop playback
+    case 'o':                 // stop playback  FIXME: check if this is in spec
         stop();
         break;
 
